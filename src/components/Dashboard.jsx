@@ -1,0 +1,155 @@
+import React from 'react';
+import { Users, Calendar, CheckSquare, Settings, QrCode, FileText, TrendingUp } from 'lucide-react';
+import { useLang } from '../LanguageContext';
+
+export default function Dashboard({ setView, config, appuntamenti }) {
+  const { t } = useLang();
+
+  const oggi = new Date().toLocaleDateString('en-CA');
+  const appOggi = (appuntamenti || [])
+    .filter(a => a.data === oggi)
+    .sort((a, b) => a.ora.localeCompare(b.ora))
+    .slice(0, 3);
+
+  return (
+    <div style={{ fontFamily: "'Baloo 2', sans-serif" }}>
+
+      {/* CARD APPUNTAMENTI OGGI */}
+      {appOggi.length > 0 && (
+        <div style={todayCardStyle} onClick={() => setView('CALENDARIO')}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <span style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              {t('dashboard_today')}
+            </span>
+            <span style={{ fontSize: '11px', color: '#5D5C9E', fontWeight: '600' }}>
+              {t('dashboard_seeAll')}
+            </span>
+          </div>
+          {appOggi.map((app, i) => (
+            <div key={app.id} style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '8px 0',
+              borderBottom: i < appOggi.length - 1 ? '1px solid #F1F5F9' : 'none'
+            }}>
+              <div style={{
+                width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
+                background: i === 0 ? '#5D5C9E' : i === 1 ? '#70C18E' : '#FFB347'
+              }} />
+              <span style={{ flex: 1, fontSize: '13px', fontWeight: '700', color: '#1E293B' }}>
+                {app.titolo}
+              </span>
+              <span style={{ fontSize: '12px', color: '#94A3B8' }}>
+                {app.ora?.slice(0, 5)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* GRID */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '16px' }}>
+
+        <div onClick={() => setView('RUBRICA')} style={cardStyle}>
+          <div style={{ ...iconWrapStyle, background: '#EEEEF8' }}>
+            <Users color="#5D5C9E" size={28} />
+          </div>
+          <span style={labelStyle}>{t('dashboard_rubrica')}</span>
+          <span style={subLabelStyle}>{t('dashboard_rubrica_sub')}</span>
+        </div>
+
+        <div onClick={() => setView('CALENDARIO')} style={cardStyle}>
+          <div style={{ ...iconWrapStyle, background: '#FFF7ED' }}>
+            <Calendar color="#F59E0B" size={28} />
+          </div>
+          <span style={labelStyle}>{t('dashboard_calendario')}</span>
+          <span style={subLabelStyle}>{t('dashboard_calendario_sub')}</span>
+        </div>
+
+        <div onClick={() => setView('TODO')} style={cardStyle}>
+          <div style={{ ...iconWrapStyle, background: '#F0FDF4' }}>
+            <CheckSquare color="#22C55E" size={28} />
+          </div>
+          <span style={labelStyle}>{t('dashboard_todo')}</span>
+          <span style={subLabelStyle}>{t('dashboard_todo_sub')}</span>
+        </div>
+
+        <div onClick={() => setView('BUSINESS_CARD')} style={cardStyle}>
+          <div style={{ ...iconWrapStyle, background: '#FFF0F3' }}>
+            <QrCode color="#D12E5F" size={28} />
+          </div>
+          <span style={labelStyle}>{t('dashboard_businessCard')}</span>
+          <span style={subLabelStyle}>{t('dashboard_businessCard_sub')}</span>
+        </div>
+
+        <div onClick={() => setView('FATTURE')} style={cardStyle}>
+          <div style={{ ...iconWrapStyle, background: '#EEF8F2' }}>
+            <FileText color="#15803D" size={28} />
+          </div>
+          <span style={labelStyle}>{t('dashboard_fatture')}</span>
+          <span style={subLabelStyle}>{t('dashboard_fatture_sub')}</span>
+        </div>
+
+        <div onClick={() => setView('FINANZE')} style={cardStyle}>
+          <div style={{ ...iconWrapStyle, background: '#FFFBEB' }}>
+            <TrendingUp color="#D97706" size={28} />
+          </div>
+          <span style={labelStyle}>{t('dashboard_finanze')}</span>
+          <span style={subLabelStyle}>{t('dashboard_finanze_sub')}</span>
+        </div>
+
+        <div onClick={() => setView('IMPOSTAZIONI')} style={{ ...cardStyle, gridColumn: 'span 2' }}>
+          <div style={{ ...iconWrapStyle, background: '#F8FAFC' }}>
+            <Settings color="#64748B" size={28} />
+          </div>
+          <span style={labelStyle}>{t('dashboard_impostazioni')}</span>
+          <span style={subLabelStyle}>{t('dashboard_impostazioni_sub')}</span>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+const todayCardStyle = {
+  background: 'white',
+  borderRadius: '20px',
+  padding: '16px',
+  boxShadow: '0 2px 12px rgba(93,92,158,0.08)',
+  border: '1px solid rgba(93,92,158,0.1)',
+  cursor: 'pointer',
+};
+const cardStyle = {
+  background: 'white',
+  padding: '20px 16px',
+  borderRadius: '22px',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '8px',
+  cursor: 'pointer',
+  boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+  border: '1px solid #F1F5F9',
+  touchAction: 'manipulation',
+  WebkitTapHighlightColor: 'transparent',
+  textAlign: 'center',
+};
+const iconWrapStyle = {
+  width: '60px',
+  height: '60px',
+  borderRadius: '18px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+const labelStyle = {
+  fontWeight: '800',
+  fontSize: '14px',
+  color: '#1E293B',
+  fontFamily: "'Baloo 2', sans-serif",
+};
+const subLabelStyle = {
+  fontSize: '11px',
+  color: '#94A3B8',
+  fontWeight: '500',
+};
