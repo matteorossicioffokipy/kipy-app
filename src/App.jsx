@@ -3,7 +3,7 @@ import { supabase } from "./supabaseClient";
 import Rubrica from './components/Rubrica';
 import Calendario from './components/Calendario';
 import Dashboard from './components/Dashboard';
-import TodoList from "./components/Todolist";
+import TodoList from "./components/TodoList";
 import Impostazioni from './components/Impostazioni';
 import BusinessCard from './components/BusinessCard';
 import Fatture from './components/Fatture';
