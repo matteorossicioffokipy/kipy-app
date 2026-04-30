@@ -3,7 +3,7 @@ import { supabase } from "./supabaseClient";
 import Rubrica from './components/Rubrica';
 import Calendario from './components/Calendario';
 import Dashboard from './components/Dashboard';
-import TodoList from "./components/TodoList";
+import TodoList from "./components/Todolist";
 import Impostazioni from './components/Impostazioni';
 import BusinessCard from './components/BusinessCard';
 import Fatture from './components/Fatture';
@@ -113,7 +113,7 @@ export default function App() {
           <LogOut size={18} color="#94A3B8" />
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center' }}>
           <img src={logo} alt="Kipy" style={{ height: '30px', width: 'auto' }}
             onError={e => { e.target.style.display = 'none'; }} />
         </div>
@@ -291,6 +291,7 @@ const headerKipyStyle = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   padding: '0 20px', height: '60px', background: 'white',
   boxShadow: '0 1px 8px rgba(0,0,0,0.06)', position: 'sticky', top: 0, zIndex: 50,
+  position: 'sticky',
 };
 const logoutBtnStyle = {
   background: '#F1F5F9', border: 'none', borderRadius: '12px', padding: '8px',
