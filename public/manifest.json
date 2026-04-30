@@ -1,6 +1,6 @@
 {
-  "short_name": "Gestionale",
-  "name": "Gestionale Clienti Kipy",
+  "short_name": "GKipy",
+  "name": "Kipy",
   "icons": [
     {
       "src": "icon.png",
