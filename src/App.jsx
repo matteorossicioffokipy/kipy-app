@@ -14,6 +14,8 @@ import { Home, LogOut } from 'lucide-react';
 import { useLang } from './LanguageContext';
 import logo from './assets/logo.png';
 import quokka from './assets/quokka.png';
+import ModaleCliente from './components/ModaleCliente';
+import ModaleAppuntamento from './components/ModaleAppuntamento';
 
 export default function App() {
   const { lang, switchLang, t } = useLang();
@@ -113,7 +115,7 @@ export default function App() {
           <LogOut size={18} color="#94A3B8" />
         </button>
 
-        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
           <img src={logo} alt="Kipy" style={{ height: '30px', width: 'auto' }}
             onError={e => { e.target.style.display = 'none'; }} />
         </div>
@@ -231,55 +233,23 @@ export default function App() {
 
         {/* MODALE CLIENTE */}
         {mostraModuloCliente && (
-          <div style={overlayStyle}>
-            <div style={modalStyle}>
-              <h3 style={{ marginTop: 0, fontFamily: "'Baloo 2', sans-serif", fontSize: '18px', fontWeight: '800', color: '#1E293B' }}>
-                {clienteInModifica ? t('rubrica_editClient') : t('rubrica_newClient')}
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <input style={inputStyle} placeholder={t('rubrica_name')} value={formCliente.nome}
-                  onChange={e => setFormCliente({ ...formCliente, nome: e.target.value })} />
-                <input style={inputStyle} placeholder={t('rubrica_phone')} value={formCliente.tel}
-                  onChange={e => setFormCliente({ ...formCliente, tel: e.target.value })} />
-                <input style={inputStyle} placeholder={t('rubrica_email')} value={formCliente.email}
-                  onChange={e => setFormCliente({ ...formCliente, email: e.target.value })} />
-                <textarea style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }}
-                  placeholder={t('rubrica_notes')} value={formCliente.note}
-                  onChange={e => setFormCliente({ ...formCliente, note: e.target.value })} />
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button onClick={() => { setMostraModuloCliente(false); setClienteInModifica(null); }} style={cancelBtn}>
-                    {t('cancel')}
-                  </button>
-                  <button onClick={handleSalvaCliente} style={saveBtn}>{t('save')}</button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <ModaleCliente
+            clienteInModifica={clienteInModifica}
+            formCliente={formCliente}
+            setFormCliente={setFormCliente}
+            onSalva={handleSalvaCliente}
+            onAnnulla={() => { setMostraModuloCliente(false); setClienteInModifica(null); }}
+          />
         )}
 
         {/* MODALE APPUNTAMENTO */}
         {mostraModuloApp && (
-          <div style={overlayStyle}>
-            <div style={modalStyle}>
-              <h3 style={{ marginTop: 0, fontFamily: "'Baloo 2', sans-serif", fontSize: '18px', fontWeight: '800', color: '#1E293B' }}>
-                {t('appt_title')}
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <input style={inputStyle} placeholder={t('appt_titleField')} value={formApp.titolo}
-                  onChange={e => setFormApp({ ...formApp, titolo: e.target.value })} />
-                <input style={inputStyle} type="date" value={formApp.data}
-                  onChange={e => setFormApp({ ...formApp, data: e.target.value })} />
-                <input style={inputStyle} type="time" value={formApp.ora}
-                  onChange={e => setFormApp({ ...formApp, ora: e.target.value })} />
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button onClick={() => { setMostraModuloApp(false); setFormApp({ titolo: '', data: '', ora: '' }); }} style={cancelBtn}>
-                    {t('cancel')}
-                  </button>
-                  <button onClick={handleSalvaAppuntamento} style={saveBtn}>{t('save')}</button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <ModaleAppuntamento
+            formApp={formApp}
+            setFormApp={setFormApp}
+            onSalva={handleSalvaAppuntamento}
+            onAnnulla={() => { setMostraModuloApp(false); setFormApp({ titolo: '', data: '', ora: '' }); }}
+          />
         )}
 
       </div>
@@ -291,7 +261,6 @@ const headerKipyStyle = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   padding: '0 20px', height: '60px', background: 'white',
   boxShadow: '0 1px 8px rgba(0,0,0,0.06)', position: 'sticky', top: 0, zIndex: 50,
-  position: 'sticky',
 };
 const logoutBtnStyle = {
   background: '#F1F5F9', border: 'none', borderRadius: '12px', padding: '8px',
