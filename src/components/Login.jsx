@@ -60,7 +60,7 @@ export default function Login({ supabase, logo }) {
         `}</style>
         <img
           src={logo}
-          alt="Kipy"
+          alt="Kipri"
           style={{
             height: '60px', width: 'auto',
             filter: 'brightness(0) invert(1)',
@@ -84,7 +84,7 @@ export default function Login({ supabase, logo }) {
     return (
       <div style={containerStyle}>
         <div style={cardStyle}>
-          <img src={logo} alt="Kipy" style={{ height: '50px', marginBottom: '24px' }} />
+          <img src={logo} alt="Kipri" style={{ height: '50px', marginBottom: '24px' }} />
 
           {resetSent ? (
             <div style={{ textAlign: 'center' }}>

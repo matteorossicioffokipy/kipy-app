@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KIPY Beta — Sei stato scelto!</title>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Baloo 2', sans-serif; background: #F8F9FF; color: #1E293B; -webkit-font-smoothing: antialiased; }
+
+    .hero {
+      background: linear-gradient(135deg, #5D5C9E 0%, #3d3b7a 100%);
+      padding: 60px 24px 80px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 50% 120%, rgba(112,193,142,0.25) 0%, transparent 60%);
+    }
+    .hero-inner { position: relative; z-index: 1; max-width: 600px; margin: 0 auto; }
+    .beta-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 100px; padding: 6px 16px;
+      font-size: 13px; font-weight: 700; color: white;
+      margin-bottom: 24px; letter-spacing: 0.5px;
+    }
+    .beta-dot { width: 8px; height: 8px; background: #70C18E; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;}50%{opacity:0.4;} }
+    .hero h1 { font-size: clamp(32px, 6vw, 52px); font-weight: 800; color: white; line-height: 1.1; margin-bottom: 16px; letter-spacing: -0.5px; }
+    .hero h1 span { color: #88C999; }
+    .hero p { font-size: 17px; color: rgba(255,255,255,0.75); line-height: 1.7; max-width: 480px; margin: 0 auto 32px; }
+    .hero-cta { display: inline-flex; align-items: center; gap: 12px; background: white; color: #5D5C9E; padding: 16px 32px; border-radius: 16px; font-size: 17px; font-weight: 800; text-decoration: none; box-shadow: 0 8px 32px rgba(0,0,0,0.2); transition: transform 0.2s; }
+    .hero-cta:hover { transform: translateY(-2px); }
+    .hero-note { font-size: 13px; color: rgba(255,255,255,0.4); margin-top: 14px; }
+
+    .container { max-width: 640px; margin: 0 auto; padding: 48px 24px; }
+
+    .section { background: white; border-radius: 24px; padding: 28px; margin-bottom: 20px; box-shadow: 0 2px 16px rgba(0,0,0,0.05); border: 1px solid #F1F5F9; }
+    .section-icon { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 14px; }
+    .section h2 { font-size: 20px; font-weight: 800; color: #1E293B; margin-bottom: 8px; }
+    .section p { font-size: 15px; color: #475569; line-height: 1.7; }
+
+    .steps { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
+    .step-item { display: flex; gap: 16px; align-items: flex-start; }
+    .step-num { width: 32px; height: 32px; background: #5D5C9E; color: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; flex-shrink: 0; }
+    .step-text { font-size: 15px; color: #475569; line-height: 1.6; padding-top: 4px; }
+    .step-text strong { color: #1E293B; }
+
+    .features-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+    .feat-item { background: #F8F9FF; border-radius: 14px; padding: 14px; display: flex; gap: 12px; align-items: flex-start; }
+    .feat-icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+    .feat-label { font-size: 13px; font-weight: 700; color: #1E293B; }
+    .feat-sub { font-size: 11px; color: #94A3B8; margin-top: 2px; }
+
+    .rules { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+    .rule-item { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: #475569; line-height: 1.5; }
+    .rule-check { width: 22px; height: 22px; background: #EEF8F2; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #15803D; font-size: 12px; font-weight: 800; flex-shrink: 0; margin-top: 1px; }
+
+    .cta-section { background: #5D5C9E; border-radius: 24px; padding: 36px 28px; text-align: center; margin-bottom: 20px; }
+    .cta-section h2 { font-size: 26px; font-weight: 800; color: white; margin-bottom: 10px; }
+    .cta-section p { font-size: 15px; color: rgba(255,255,255,0.7); margin-bottom: 24px; line-height: 1.6; }
+    .cta-btn { display: inline-block; background: white; color: #5D5C9E; padding: 14px 32px; border-radius: 14px; font-size: 16px; font-weight: 800; text-decoration: none; }
+
+    .feedback-section { background: white; border-radius: 24px; padding: 28px; margin-bottom: 20px; box-shadow: 0 2px 16px rgba(0,0,0,0.05); border: 1px solid #F1F5F9; }
+    .feedback-section h2 { font-size: 20px; font-weight: 800; color: #1E293B; margin-bottom: 8px; }
+    .feedback-section p { font-size: 15px; color: #475569; margin-bottom: 20px; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-label { font-size: 13px; font-weight: 700; color: #64748B; display: block; margin-bottom: 6px; }
+    .form-input { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid #E2E8F0; font-family: 'Baloo 2', sans-serif; font-size: 14px; color: #1E293B; outline: none; background: #F8FAFC; transition: border 0.2s; }
+    .form-input:focus { border-color: #5D5C9E; background: white; }
+    textarea.form-input { min-height: 90px; resize: vertical; }
+    .stars { display: flex; gap: 8px; margin-top: 6px; }
+    .star { font-size: 28px; cursor: pointer; opacity: 0.3; transition: opacity 0.15s; }
+    .star.active { opacity: 1; }
+    .rating-group { display: flex; flex-direction: column; gap: 14px; margin-bottom: 16px; }
+    .rating-row { display: flex; justify-content: space-between; align-items: center; }
+    .rating-label { font-size: 14px; font-weight: 600; color: #475569; }
+    .mini-stars { display: flex; gap: 4px; }
+    .mini-star { font-size: 22px; cursor: pointer; opacity: 0.3; transition: opacity 0.15s; }
+    .mini-star.active { opacity: 1; }
+    .submit-btn { width: 100%; background: #5D5C9E; color: white; border: none; padding: 14px; border-radius: 14px; font-size: 16px; font-weight: 800; cursor: pointer; font-family: 'Baloo 2', sans-serif; margin-top: 8px; transition: all 0.2s; }
+    .submit-btn:hover { background: #4a4980; }
+    .submit-btn:disabled { background: #94A3B8; cursor: not-allowed; }
+    .success-msg { text-align: center; padding: 20px; background: #EEF8F2; border-radius: 14px; color: #15803D; font-weight: 700; font-size: 16px; display: none; }
+
+    footer { text-align: center; padding: 20px; font-size: 12px; color: #94A3B8; }
+  </style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="beta-badge"><div class="beta-dot"></div> Beta Privata · Accesso Esclusivo</div>
+    <h1>Benvenuto nel<br>team <span>KIPY</span> 🎉</h1>
+    <p>Sei stato selezionato come beta tester. Il tuo feedback ci aiuterà a costruire qualcosa di straordinario.</p>
+    <a href="http://localhost:5173" class="hero-cta">Apri KIPY →</a>
+    <p class="hero-note">Gratuito durante tutta la beta · Nessuna carta richiesta</p>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- COME INIZIARE -->
+  <div class="section">
+    <div class="section-icon" style="background:#EEEEF8;">🚀</div>
+    <h2>Come iniziare in 3 passi</h2>
+    <p>Sei a pochi minuti dall'avere il tuo business sempre in tasca.</p>
+    <div class="steps">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-text"><strong>Apri KIPY</strong> — clicca il bottone qui sopra o vai su <strong>kipy.com</strong></div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-text"><strong>Crea il tuo account</strong> — inserisci email e password. Il profilo si configura in 2 minuti.</div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-text"><strong>Inizia ad usarla</strong> — aggiungi i tuoi clienti, crea appuntamenti e attiva i promemoria WhatsApp.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FUNZIONALITÀ -->
+  <div class="section">
+    <div class="section-icon" style="background:#EEF8F2;">✨</div>
+    <h2>Cosa puoi fare con KIPY</h2>
+    <p>Tutto quello che serve per gestire la tua attività, in un'unica app.</p>
+    <div class="features-grid">
+      <div class="feat-item">
+        <div class="feat-icon" style="background:#EEEEF8;">📅</div>
+        <div><div class="feat-label">Calendario</div><div class="feat-sub">Appuntamenti sempre organizzati</div></div>
+      </div>
+      <div class="feat-item">
+        <div class="feat-icon" style="background:#EEF8F2;">👥</div>
+        <div><div class="feat-label">Rubrica</div><div class="feat-sub">Gestisci i tuoi clienti</div></div>
+      </div>
+      <div class="feat-item">
+        <div class="feat-icon" style="background:#DCFCE7;">💬</div>
+        <div><div class="feat-label">WhatsApp</div><div class="feat-sub">Promemoria automatici</div></div>
+      </div>
+      <div class="feat-item">
+        <div class="feat-icon" style="background:#FFFBEB;">📄</div>
+        <div><div class="feat-label">Fatture</div><div class="feat-sub">Crea e scarica PDF</div></div>
+      </div>
+      <div class="feat-item">
+        <div class="feat-icon" style="background:#FFF0F6;">📊</div>
+        <div><div class="feat-label">Finanze</div><div class="feat-sub">Entrate e uscite</div></div>
+      </div>
+      <div class="feat-item">
+        <div class="feat-icon" style="background:#EEEEF8;">🪪</div>
+        <div><div class="feat-label">Business QR</div><div class="feat-sub">Il tuo biglietto digitale</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COSA TESTARE -->
+  <div class="section">
+    <div class="section-icon" style="background:#FFFBEB;">🔍</div>
+    <h2>Su cosa concentrarti</h2>
+    <p>Usa KIPY nel tuo lavoro quotidiano per almeno una settimana e dimmi:</p>
+    <div class="rules">
+      <div class="rule-item"><div class="rule-check">✓</div>Riesci ad aggiungere clienti facilmente?</div>
+      <div class="rule-item"><div class="rule-check">✓</div>Il calendario funziona bene sul telefono?</div>
+      <div class="rule-item"><div class="rule-check">✓</div>I promemoria WhatsApp ti fanno risparmiare tempo?</div>
+      <div class="rule-item"><div class="rule-check">✓</div>Le fatture e il report PDF sono utili?</div>
+      <div class="rule-item"><div class="rule-check">✓</div>C'è qualcosa che ti manca o che non funziona come ti aspetti?</div>
+    </div>
+  </div>
+
+  <!-- CTA APRI APP -->
+  <div class="cta-section">
+    <h2>Pronto a iniziare? 🚀</h2>
+    <p>Apri KIPY sul tuo telefono o computer e inizia subito. Se hai problemi o domande, rispondi a questa email.</p>
+    <a href="http://localhost:5173" class="cta-btn">Apri KIPY ora →</a>
+  </div>
+
+  <!-- FORM FEEDBACK -->
+  <div class="feedback-section" id="feedback">
+    <div class="section-icon" style="background:#F0FDF4; display:inline-flex; margin-bottom:14px;">💬</div>
+    <h2>Lascia il tuo feedback</h2>
+    <p>Dopo aver usato KIPY per qualche giorno, compila questo modulo. Ogni risposta è preziosa!</p>
+
+    <div id="form-area">
+      <!-- Valutazione generale -->
+      <div class="form-group">
+        <label class="form-label">Valutazione generale</label>
+        <div class="stars" id="stars-general">
+          <span class="star" data-val="1">⭐</span>
+          <span class="star" data-val="2">⭐</span>
+          <span class="star" data-val="3">⭐</span>
+          <span class="star" data-val="4">⭐</span>
+          <span class="star" data-val="5">⭐</span>
+        </div>
+        <input type="hidden" id="rating-general" value="0"/>
+      </div>
+
+      <!-- Valutazioni per sezione -->
+      <div class="form-group">
+        <label class="form-label">Valuta ogni sezione</label>
+        <div class="rating-group">
+          <div class="rating-row">
+            <span class="rating-label">📅 Calendario</span>
+            <div class="mini-stars" data-section="cal">
+              <span class="mini-star" data-val="1">⭐</span><span class="mini-star" data-val="2">⭐</span><span class="mini-star" data-val="3">⭐</span><span class="mini-star" data-val="4">⭐</span><span class="mini-star" data-val="5">⭐</span>
+            </div>
+          </div>
+          <div class="rating-row">
+            <span class="rating-label">👥 Rubrica</span>
+            <div class="mini-stars" data-section="rubrica">
+              <span class="mini-star" data-val="1">⭐</span><span class="mini-star" data-val="2">⭐</span><span class="mini-star" data-val="3">⭐</span><span class="mini-star" data-val="4">⭐</span><span class="mini-star" data-val="5">⭐</span>
+            </div>
+          </div>
+          <div class="rating-row">
+            <span class="rating-label">💬 Promemoria WhatsApp</span>
+            <div class="mini-stars" data-section="wa">
+              <span class="mini-star" data-val="1">⭐</span><span class="mini-star" data-val="2">⭐</span><span class="mini-star" data-val="3">⭐</span><span class="mini-star" data-val="4">⭐</span><span class="mini-star" data-val="5">⭐</span>
+            </div>
+          </div>
+          <div class="rating-row">
+            <span class="rating-label">📄 Fatture</span>
+            <div class="mini-stars" data-section="fatture">
+              <span class="mini-star" data-val="1">⭐</span><span class="mini-star" data-val="2">⭐</span><span class="mini-star" data-val="3">⭐</span><span class="mini-star" data-val="4">⭐</span><span class="mini-star" data-val="5">⭐</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Cosa usi di più?</label>
+        <select class="form-input" id="most-used">
+          <option value="">Seleziona...</option>
+          <option>Calendario & Appuntamenti</option>
+          <option>Rubrica Clienti</option>
+          <option>Promemoria WhatsApp</option>
+          <option>Fatture</option>
+          <option>Finanze</option>
+          <option>Business Card QR</option>
+          <option>Todo List</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Cosa ti è piaciuto di più? 😍</label>
+        <textarea class="form-input" id="liked" placeholder="Raccontami cosa ha funzionato bene..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Cosa miglioreresti? 🔧</label>
+        <textarea class="form-input" id="improve" placeholder="Cosa non ha funzionato o cosa ti manca?"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Consiglieresti KIPY a un collega?</label>
+        <select class="form-input" id="recommend">
+          <option value="">Seleziona...</option>
+          <option>Sì, assolutamente!</option>
+          <option>Probabilmente sì</option>
+          <option>Non ancora, ha bisogno di miglioramenti</option>
+          <option>No</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Quanto pagheresti per KIPY al mese? (versione completa)</label>
+        <select class="form-input" id="price">
+          <option value="">Seleziona...</option>
+          <option>Niente, voglio solo la versione gratuita</option>
+          <option>£3–5 / mese</option>
+          <option>£6–9 / mese</option>
+          <option>£10–14 / mese</option>
+          <option>Più di £15 / mese se vale</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Altro — c'è qualcos'altro che vuoi dirmi?</label>
+        <textarea class="form-input" id="other" placeholder="Suggerimenti, idee, bugs, qualsiasi cosa..."></textarea>
+      </div>
+
+      <button class="submit-btn" onclick="inviaFeedback()">Invia Feedback →</button>
+    </div>
+
+    <div class="success-msg" id="success-msg">
+      🎉 Grazie mille! Il tuo feedback è stato inviato.<br>Sei fondamentale per migliorare KIPY!
+    </div>
+  </div>
+
+</div>
+
+<footer>Fatto con ❤️ · KIPY Beta 2026</footer>
+
+<script>
+// Stars generali
+document.querySelectorAll('#stars-general .star').forEach(star => {
+  star.addEventListener('click', () => {
+    const val = parseInt(star.dataset.val);
+    document.getElementById('rating-general').value = val;
+    document.querySelectorAll('#stars-general .star').forEach((s, i) => {
+      s.classList.toggle('active', i < val);
+    });
+  });
+});
+
+// Mini stars per sezione
+document.querySelectorAll('.mini-stars').forEach(group => {
+  group.querySelectorAll('.mini-star').forEach(star => {
+    star.addEventListener('click', () => {
+      const val = parseInt(star.dataset.val);
+      group.querySelectorAll('.mini-star').forEach((s, i) => {
+        s.classList.toggle('active', i < val);
+      });
+      group.dataset.rating = val;
+    });
+  });
+});
+
+function inviaFeedback() {
+  const btn = document.querySelector('.submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Invio in corso...';
+
+  // Raccoglie tutti i dati
+  const data = {
+    rating_generale: document.getElementById('rating-general').value,
+    rating_calendario: document.querySelector('[data-section="cal"]')?.dataset.rating || '—',
+    rating_rubrica: document.querySelector('[data-section="rubrica"]')?.dataset.rating || '—',
+    rating_whatsapp: document.querySelector('[data-section="wa"]')?.dataset.rating || '—',
+    rating_fatture: document.querySelector('[data-section="fatture"]')?.dataset.rating || '—',
+    sezione_piu_usata: document.getElementById('most-used').value,
+    piaciuto: document.getElementById('liked').value,
+    miglioramenti: document.getElementById('improve').value,
+    consigliato: document.getElementById('recommend').value,
+    prezzo_pagherebbe: document.getElementById('price').value,
+    altro: document.getElementById('other').value,
+    data_invio: new Date().toLocaleDateString('it-IT'),
+  };
+
+  // Crea mailto con tutti i dati
+  const subject = encodeURIComponent('KIPY Beta — Feedback utente');
+  const body = encodeURIComponent(
+    `FEEDBACK KIPY BETA\n` +
+    `==================\n\n` +
+    `⭐ Valutazione generale: ${data.rating_generale}/5\n\n` +
+    `📊 Valutazioni per sezione:\n` +
+    `  📅 Calendario: ${data.rating_calendario}/5\n` +
+    `  👥 Rubrica: ${data.rating_rubrica}/5\n` +
+    `  💬 WhatsApp: ${data.rating_whatsapp}/5\n` +
+    `  📄 Fatture: ${data.rating_fatture}/5\n\n` +
+    `🔥 Sezione più usata: ${data.sezione_piu_usata}\n\n` +
+    `😍 Cosa è piaciuto:\n${data.piaciuto}\n\n` +
+    `🔧 Cosa migliorare:\n${data.miglioramenti}\n\n` +
+    `📢 Lo consiglierebbe: ${data.consigliato}\n\n` +
+    `💰 Prezzo giusto: ${data.prezzo_pagherebbe}\n\n` +
+    `💬 Altro:\n${data.altro}\n\n` +
+    `📅 Data: ${data.data_invio}`
+  );
+
+  // Apre il client email con il feedback
+  window.location.href = `mailto:tua@email.com?subject=${subject}&body=${body}`;
+
+  setTimeout(() => {
+    document.getElementById('form-area').style.display = 'none';
+    document.getElementById('success-msg').style.display = 'block';
+  }, 1500);
+}
+</script>
+
+</body>
+</html>

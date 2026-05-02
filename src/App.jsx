@@ -102,7 +102,7 @@ export default function App() {
     <div style={{ minHeight: '100vh', backgroundColor: '#F1F5F9', fontFamily: "'Baloo 2', sans-serif" }}>
 
       {/* HEADER */}
-      <div style={headerKipyStyle}>
+      <div style={headerKipriStyle}>
         <button
           onClick={async () => {
             await supabase.auth.signOut();
@@ -115,8 +115,8 @@ export default function App() {
           <LogOut size={18} color="#94A3B8" />
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <img src={logo} alt="Kipy" style={{ height: '30px', width: 'auto' }}
+        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center' }}>
+          <img src={logo} alt="Kipri" style={{ height: '30px', width: 'auto' }}
             onError={e => { e.target.style.display = 'none'; }} />
         </div>
 
@@ -231,36 +231,38 @@ export default function App() {
           <Impostazioni config={config} setConfig={setConfig} supabase={supabase} user={user} fetchDati={fetchDati} />
         )}
 
-        {/* MODALE CLIENTE */}
-        {mostraModuloCliente && (
-          <ModaleCliente
-            clienteInModifica={clienteInModifica}
-            formCliente={formCliente}
-            setFormCliente={setFormCliente}
-            onSalva={handleSalvaCliente}
-            onAnnulla={() => { setMostraModuloCliente(false); setClienteInModifica(null); }}
-          />
-        )}
-
-        {/* MODALE APPUNTAMENTO */}
-        {mostraModuloApp && (
-          <ModaleAppuntamento
-            formApp={formApp}
-            setFormApp={setFormApp}
-            onSalva={handleSalvaAppuntamento}
-            onAnnulla={() => { setMostraModuloApp(false); setFormApp({ titolo: '', data: '', ora: '' }); }}
-          />
-        )}
-
       </div>
+
+      {/* MODALE CLIENTE — fuori dal container per coprire tutto lo schermo */}
+      {mostraModuloCliente && (
+        <ModaleCliente
+          clienteInModifica={clienteInModifica}
+          formCliente={formCliente}
+          setFormCliente={setFormCliente}
+          onSalva={handleSalvaCliente}
+          onAnnulla={() => { setMostraModuloCliente(false); setClienteInModifica(null); }}
+        />
+      )}
+
+      {/* MODALE APPUNTAMENTO — fuori dal container per coprire tutto lo schermo */}
+      {mostraModuloApp && (
+        <ModaleAppuntamento
+          formApp={formApp}
+          setFormApp={setFormApp}
+          onSalva={handleSalvaAppuntamento}
+          onAnnulla={() => { setMostraModuloApp(false); setFormApp({ titolo: '', data: '', ora: '' }); }}
+        />
+      )}
+
     </div>
   );
 }
 
-const headerKipyStyle = {
+const headerKipriStyle = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   padding: '0 20px', height: '60px', background: 'white',
   boxShadow: '0 1px 8px rgba(0,0,0,0.06)', position: 'sticky', top: 0, zIndex: 50,
+  position: 'relative',
 };
 const logoutBtnStyle = {
   background: '#F1F5F9', border: 'none', borderRadius: '12px', padding: '8px',
