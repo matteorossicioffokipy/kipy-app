@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Save, Upload, Check, MessageCircle, Building2, Image } from 'lucide-react';
+import { Save, Upload, Check, MessageCircle, Building2, Image, Zap, Crown } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 
 export default function Impostazioni({ config, setConfig, supabase, user, fetchDati }) {
   const { t, lang, switchLang } = useLang();
   const [loading, setLoading] = useState(false);
   const [salvato, setSalvato] = useState(false);
+  const [loadingPro, setLoadingPro] = useState(false);
+
+  const isPro = config?.is_pro === true;
 
   const handleSave = async () => {
     setLoading(true);
@@ -36,6 +39,30 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
     fetchDati();
   };
 
+  const handleUpgradePro = async () => {
+    setLoadingPro(true);
+    try {
+      const res = await fetch('/.netlify/functions/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          email: user.email,
+          lang: lang,
+        }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('Errore nel creare la sessione di pagamento. Riprova.');
+      }
+    } catch (err) {
+      alert('Errore di rete. Riprova.');
+    }
+    setLoadingPro(false);
+  };
+
   const testoDefault = `Ciao! 👋\nTi ricordiamo il tuo appuntamento con ${config.nome_azienda || 'noi'} {data} alle {ora}.\nA presto!`;
 
   return (
@@ -43,6 +70,96 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
       <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#1E293B', margin: 0 }}>
         {t('impostazioni_title')}
       </h2>
+
+      {/* ── PIANO ── */}
+      {isPro ? (
+        <div style={{
+          background: 'linear-gradient(135deg, #5D5C9E 0%, #3d3b7a 100%)',
+          borderRadius: '20px', padding: '20px',
+          display: 'flex', alignItems: 'center', gap: '14px',
+          boxShadow: '0 8px 24px rgba(93,92,158,0.3)',
+        }}>
+          <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Crown size={22} color="white" />
+          </div>
+          <div>
+            <div style={{ fontSize: '16px', fontWeight: '800', color: 'white' }}>
+              {lang === 'it' ? 'Piano Pro attivo ✨' : 'Pro Plan active ✨'}
+            </div>
+            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', marginTop: '2px' }}>
+              {lang === 'it' ? 'Hai accesso a tutte le funzionalità premium.' : 'You have access to all premium features.'}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div style={{
+          background: 'white', borderRadius: '20px', padding: '20px',
+          border: '2px solid #EEEEF8',
+          boxShadow: '0 2px 12px rgba(93,92,158,0.07)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: '#EEEEF8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Zap size={16} color="#5D5C9E" />
+            </div>
+            <span style={{ fontSize: '15px', fontWeight: '800', color: '#1E293B' }}>
+              {lang === 'it' ? 'Piano attuale: Free' : 'Current plan: Free'}
+            </span>
+          </div>
+
+          {/* Feature comparison */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '16px' }}>
+            {[
+              { it: 'Fino a 20 clienti', en: 'Up to 20 clients', pro: false },
+              { it: 'Calendario', en: 'Calendar', pro: false },
+              { it: 'Promemoria WhatsApp', en: 'WhatsApp reminders', pro: false },
+              { it: 'Clienti illimitati', en: 'Unlimited clients', pro: true },
+              { it: 'Fatture PDF', en: 'PDF invoices', pro: true },
+              { it: 'Analytics avanzate', en: 'Advanced analytics', pro: true },
+            ].map((f, i) => (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: '7px',
+                fontSize: '12px', color: f.pro ? '#5D5C9E' : '#64748B',
+                fontWeight: f.pro ? '700' : '500',
+              }}>
+                <div style={{
+                  width: '16px', height: '16px', borderRadius: '4px', flexShrink: 0,
+                  background: f.pro ? '#EEEEF8' : '#EEF8F2',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '9px', fontWeight: '800',
+                  color: f.pro ? '#5D5C9E' : '#15803D',
+                }}>
+                  {f.pro ? '★' : '✓'}
+                </div>
+                {lang === 'it' ? f.it : f.en}
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={handleUpgradePro}
+            disabled={loadingPro}
+            style={{
+              width: '100%', padding: '14px', borderRadius: '14px',
+              background: loadingPro ? '#94A3B8' : 'linear-gradient(135deg, #5D5C9E 0%, #3d3b7a 100%)',
+              color: 'white', border: 'none',
+              fontSize: '15px', fontWeight: '800',
+              cursor: loadingPro ? 'not-allowed' : 'pointer',
+              fontFamily: "'Baloo 2', sans-serif",
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              boxShadow: '0 4px 16px rgba(93,92,158,0.3)',
+            }}
+          >
+            <Crown size={18} />
+            {loadingPro
+              ? (lang === 'it' ? 'Reindirizzamento...' : 'Redirecting...')
+              : (lang === 'it' ? `Passa a Pro — €5.99/mese` : `Upgrade to Pro — £5.99/month`)}
+          </button>
+
+          <p style={{ fontSize: '11px', color: '#94A3B8', textAlign: 'center', marginTop: '8px', margin: '8px 0 0' }}>
+            {lang === 'it' ? 'Pagamento sicuro via Stripe · Annulla quando vuoi' : 'Secure payment via Stripe · Cancel anytime'}
+          </p>
+        </div>
+      )}
 
       {/* LINGUA */}
       <div style={sectionStyle}>
