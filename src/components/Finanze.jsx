@@ -21,6 +21,9 @@ export default function Finanze({ supabase, user }) {
     data: new Date().toLocaleDateString('en-CA')
   });
 
+  // Valuta in base alla lingua
+  const currency = lang === 'it' ? '€' : '£';
+
   const CATEntrate = lang === 'en' ? CATEGORIE_ENTRATE_EN : CATEGORIE_ENTRATE_IT;
   const CATUscite = lang === 'en' ? CATEGORIE_USCITE_EN : CATEGORIE_USCITE_IT;
 
@@ -38,7 +41,8 @@ export default function Finanze({ supabase, user }) {
   const saldo = totEntrate - totUscite;
 
   const salvaMovimento = async () => {
-    if (!form.importo || !form.categoria) return alert(t('finanze_category') + ' e importo richiesti');
+    if (!form.importo || !form.categoria)
+      return alert((lang === 'it' ? 'Importo e categoria richiesti' : 'Amount and category required'));
     const { error } = await supabase.from('movimenti').insert([{
       user_id: user.id, tipo: tipoForm,
       importo: parseFloat(form.importo),
@@ -59,7 +63,9 @@ export default function Finanze({ supabase, user }) {
 
   const scaricaReport = () => {
     const [anno, mese] = meseSelezionato.split('-');
-    const nomeMese = new Date(anno, parseInt(mese) - 1, 1).toLocaleDateString(lang === 'en' ? 'en-GB' : 'it-IT', { month: 'long', year: 'numeric' });
+    const nomeMese = new Date(anno, parseInt(mese) - 1, 1)
+      .toLocaleDateString(lang === 'en' ? 'en-GB' : 'it-IT', { month: 'long', year: 'numeric' });
+
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/>
     <style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Arial,sans-serif;color:#1E293B;padding:40px;font-size:13px;}
     h1{font-size:24px;font-weight:900;color:#5D5C9E;margin-bottom:4px;}.subtitle{color:#94A3B8;font-size:13px;margin-bottom:32px;}
@@ -76,103 +82,131 @@ export default function Finanze({ supabase, user }) {
     <h1>${lang === 'en' ? 'Financial Report' : 'Report Finanziario'}</h1>
     <div class="subtitle">${nomeMese}</div>
     <div class="summary">
-    <div class="sum-box entrate-box"><div class="sum-label">${t('finanze_income')}</div><div class="sum-value">£${totEntrate.toFixed(2)}</div></div>
-    <div class="sum-box uscite-box"><div class="sum-label">${t('finanze_expenses')}</div><div class="sum-value">£${totUscite.toFixed(2)}</div></div>
-    <div class="sum-box saldo-box"><div class="sum-label">${t('finanze_balance')}</div><div class="sum-value">£${saldo.toFixed(2)}</div></div>
+      <div class="sum-box entrate-box"><div class="sum-label">${t('finanze_income')}</div><div class="sum-value">${currency}${totEntrate.toFixed(2)}</div></div>
+      <div class="sum-box uscite-box"><div class="sum-label">${t('finanze_expenses')}</div><div class="sum-value">${currency}${totUscite.toFixed(2)}</div></div>
+      <div class="sum-box saldo-box"><div class="sum-label">${t('finanze_balance')}</div><div class="sum-value">${currency}${saldo.toFixed(2)}</div></div>
     </div>
     <h2>${t('finanze_income')}</h2>
-    <table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th style="text-align:right;">Amount</th></tr></thead>
-    <tbody>${movimentiFiltrati.filter(m => m.tipo === 'entrata').map(m => `<tr><td>${new Date(m.data).toLocaleDateString('en-GB')}</td><td>${m.categoria}</td><td>${m.descrizione || '—'}</td><td style="text-align:right;" class="importo-e">+£${parseFloat(m.importo).toFixed(2)}</td></tr>`).join('')}</tbody></table>
+    <table><thead><tr><th>${lang === 'it' ? 'Data' : 'Date'}</th><th>${lang === 'it' ? 'Categoria' : 'Category'}</th><th>${lang === 'it' ? 'Descrizione' : 'Description'}</th><th style="text-align:right;">${lang === 'it' ? 'Importo' : 'Amount'}</th></tr></thead>
+    <tbody>${movimentiFiltrati.filter(m => m.tipo === 'entrata').map(m => `<tr><td>${new Date(m.data).toLocaleDateString('en-GB')}</td><td>${m.categoria}</td><td>${m.descrizione || '—'}</td><td style="text-align:right;" class="importo-e">+${currency}${parseFloat(m.importo).toFixed(2)}</td></tr>`).join('')}</tbody></table>
     <h2>${t('finanze_expenses')}</h2>
-    <table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th style="text-align:right;">Amount</th></tr></thead>
-    <tbody>${movimentiFiltrati.filter(m => m.tipo === 'uscita').map(m => `<tr><td>${new Date(m.data).toLocaleDateString('en-GB')}</td><td>${m.categoria}</td><td>${m.descrizione || '—'}</td><td style="text-align:right;" class="importo-u">-£${parseFloat(m.importo).toFixed(2)}</td></tr>`).join('')}</tbody></table>
-    <div class="footer">Generated with KIPY · your business in your pocket</div></body></html>`;
+    <table><thead><tr><th>${lang === 'it' ? 'Data' : 'Date'}</th><th>${lang === 'it' ? 'Categoria' : 'Category'}</th><th>${lang === 'it' ? 'Descrizione' : 'Description'}</th><th style="text-align:right;">${lang === 'it' ? 'Importo' : 'Amount'}</th></tr></thead>
+    <tbody>${movimentiFiltrati.filter(m => m.tipo === 'uscita').map(m => `<tr><td>${new Date(m.data).toLocaleDateString('en-GB')}</td><td>${m.categoria}</td><td>${m.descrizione || '—'}</td><td style="text-align:right;" class="importo-u">-${currency}${parseFloat(m.importo).toFixed(2)}</td></tr>`).join('')}</tbody></table>
+    <div class="footer">Generated with KIPRI · your business in your pocket</div>
+    </body></html>`;
 
     const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = `report-${meseSelezionato}.html`; a.click();
+    a.href = url;
+    a.download = `report-${meseSelezionato}.html`;
+    a.click();
     URL.revokeObjectURL(url);
   };
 
   return (
     <div style={{ fontFamily: "'Baloo 2', sans-serif" }}>
 
+      {/* HEADER */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: '#1E293B' }}>{t('finanze_title')}</h2>
           <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#94A3B8' }}>{t('finanze_subtitle')}</p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={scaricaReport} style={iconBtnStyle('#EEF8F2', '#15803D')} title={t('finanze_report')}><Download size={18} /></button>
+          <button onClick={scaricaReport} style={iconBtnStyle('#EEF8F2', '#15803D')} title={t('finanze_report')}>
+            <Download size={18} />
+          </button>
           <button onClick={() => { setMostraForm(!mostraForm); setTipoForm('entrata'); }} style={addBtnStyle}>
             {mostraForm ? <ChevronUp size={20} /> : <Plus size={20} />}
           </button>
         </div>
       </div>
 
+      {/* FILTRO MESE */}
       <div style={{ marginBottom: '16px' }}>
-        <input type="month" value={meseSelezionato} onChange={e => setMeseSelezionato(e.target.value)}
+        <input type="month" value={meseSelezionato}
+          onChange={e => setMeseSelezionato(e.target.value)}
           style={{ ...inputStyle, width: 'auto', fontWeight: '700' }} />
       </div>
 
+      {/* SUMMARY CARDS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '20px' }}>
         <div style={summaryCard('#EEF8F2', '#15803D')}>
           <TrendingUp size={16} color="#15803D" />
           <div style={{ fontSize: '11px', marginTop: '4px' }}>{t('finanze_income')}</div>
-          <div style={{ fontSize: '20px', fontWeight: '800' }}>£{totEntrate.toFixed(0)}</div>
+          <div style={{ fontSize: '20px', fontWeight: '800' }}>{currency}{totEntrate.toFixed(0)}</div>
         </div>
         <div style={summaryCard('#FEF2F2', '#EF4444')}>
           <TrendingDown size={16} color="#EF4444" />
           <div style={{ fontSize: '11px', marginTop: '4px' }}>{t('finanze_expenses')}</div>
-          <div style={{ fontSize: '20px', fontWeight: '800' }}>£{totUscite.toFixed(0)}</div>
+          <div style={{ fontSize: '20px', fontWeight: '800' }}>{currency}{totUscite.toFixed(0)}</div>
         </div>
         <div style={summaryCard(saldo >= 0 ? '#EEEEF8' : '#FEF2F2', saldo >= 0 ? '#5D5C9E' : '#EF4444')}>
           <div style={{ fontSize: '11px', marginTop: '4px' }}>{t('finanze_balance')}</div>
-          <div style={{ fontSize: '20px', fontWeight: '800' }}>£{saldo.toFixed(0)}</div>
+          <div style={{ fontSize: '20px', fontWeight: '800' }}>{currency}{saldo.toFixed(0)}</div>
         </div>
       </div>
 
+      {/* FORM */}
       {mostraForm && (
         <div style={cardStyle}>
+          {/* Tab Entrata / Uscita */}
           <div style={{ display: 'flex', gap: '4px', background: '#F1F5F9', padding: '3px', borderRadius: '12px', marginBottom: '16px' }}>
-            <button onClick={() => setTipoForm('entrata')} style={tabStyle(tipoForm === 'entrata', '#15803D')}>{t('finanze_income_tab')}</button>
-            <button onClick={() => setTipoForm('uscita')} style={tabStyle(tipoForm === 'uscita', '#EF4444')}>{t('finanze_expense_tab')}</button>
+            <button onClick={() => setTipoForm('entrata')} style={tabStyle(tipoForm === 'entrata', '#15803D')}>
+              {t('finanze_income_tab')}
+            </button>
+            <button onClick={() => setTipoForm('uscita')} style={tabStyle(tipoForm === 'uscita', '#EF4444')}>
+              {t('finanze_expense_tab')}
+            </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+          {/* Importo + Data */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
             <div>
-              <label style={labelStyle}>{t('finanze_amount')}</label>
-              <input style={inputStyle} type="number" step="0.01" placeholder="0.00" value={form.importo} onChange={e => setForm({ ...form, importo: e.target.value })} />
+              <label style={labelStyle}>{lang === 'it' ? `Importo ${currency}` : `Amount ${currency}`}</label>
+              <input style={inputStyle} type="number" step="0.01" placeholder="0.00"
+                value={form.importo} onChange={e => setForm({ ...form, importo: e.target.value })} />
             </div>
             <div>
-              <label style={labelStyle}>Date</label>
-              <input style={inputStyle} type="date" value={form.data} onChange={e => setForm({ ...form, data: e.target.value })} />
+              <label style={labelStyle}>{lang === 'it' ? 'Data' : 'Date'}</label>
+              <input style={{ ...inputStyle, background: '#F8FAFC' }} type="date"
+                value={form.data} onChange={e => setForm({ ...form, data: e.target.value })} />
             </div>
           </div>
 
-          <div style={{ marginBottom: '10px' }}>
+          {/* Categoria */}
+          <div style={{ marginBottom: '12px' }}>
             <label style={labelStyle}>{t('finanze_category')}</label>
-            <select style={inputStyle} value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })}>
+            <select style={inputStyle} value={form.categoria}
+              onChange={e => setForm({ ...form, categoria: e.target.value })}>
               <option value="">{t('finanze_selectCategory')}</option>
-              {(tipoForm === 'entrata' ? CATEntrate : CATUscite).map(c => <option key={c} value={c}>{c}</option>)}
+              {(tipoForm === 'entrata' ? CATEntrate : CATUscite).map(c =>
+                <option key={c} value={c}>{c}</option>
+              )}
             </select>
           </div>
 
+          {/* Descrizione */}
           <div style={{ marginBottom: '16px' }}>
             <label style={labelStyle}>{t('finanze_description')}</label>
-            <input style={inputStyle} placeholder={t('finanze_description')} value={form.descrizione} onChange={e => setForm({ ...form, descrizione: e.target.value })} />
+            <input style={inputStyle}
+              placeholder={lang === 'it' ? 'Descrizione (opzionale)' : 'Description (optional)'}
+              value={form.descrizione} onChange={e => setForm({ ...form, descrizione: e.target.value })} />
           </div>
 
+          {/* Bottoni */}
           <div style={{ display: 'flex', gap: '10px' }}>
             <button onClick={() => setMostraForm(false)} style={cancelBtn}>{t('cancel')}</button>
-            <button onClick={salvaMovimento} style={{ ...saveBtn, background: tipoForm === 'entrata' ? '#15803D' : '#EF4444' }}>
+            <button onClick={salvaMovimento}
+              style={{ ...saveBtn, background: tipoForm === 'entrata' ? '#15803D' : '#EF4444' }}>
               {tipoForm === 'entrata' ? t('finanze_addIncome') : t('finanze_addExpense')}
             </button>
           </div>
         </div>
       )}
 
+      {/* LISTA MOVIMENTI */}
       {movimentiFiltrati.length === 0 ? (
         <div style={emptyStyle}>
           <TrendingUp size={32} color="#CBD5E1" />
@@ -184,18 +218,31 @@ export default function Finanze({ supabase, user }) {
             <div key={m.id} style={movimentoCardStyle(m.tipo)}>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 10px', borderRadius: '20px', background: m.tipo === 'entrata' ? '#EEF8F2' : '#FEF2F2', color: m.tipo === 'entrata' ? '#15803D' : '#EF4444' }}>
+                  <span style={{
+                    fontSize: '11px', fontWeight: '700', padding: '2px 10px',
+                    borderRadius: '20px',
+                    background: m.tipo === 'entrata' ? '#EEF8F2' : '#FEF2F2',
+                    color: m.tipo === 'entrata' ? '#15803D' : '#EF4444'
+                  }}>
                     {m.categoria}
                   </span>
-                  <span style={{ fontSize: '11px', color: '#94A3B8' }}>{new Date(m.data).toLocaleDateString('en-GB')}</span>
+                  <span style={{ fontSize: '11px', color: '#94A3B8' }}>
+                    {new Date(m.data).toLocaleDateString('en-GB')}
+                  </span>
                 </div>
-                {m.descrizione && <div style={{ fontSize: '13px', color: '#1E293B', fontWeight: '600', marginTop: '4px' }}>{m.descrizione}</div>}
+                {m.descrizione && (
+                  <div style={{ fontSize: '13px', color: '#1E293B', fontWeight: '600', marginTop: '4px' }}>
+                    {m.descrizione}
+                  </div>
+                )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <span style={{ fontSize: '16px', fontWeight: '800', color: m.tipo === 'entrata' ? '#15803D' : '#EF4444' }}>
-                  {m.tipo === 'entrata' ? '+' : '-'}£{parseFloat(m.importo).toFixed(2)}
+                  {m.tipo === 'entrata' ? '+' : '-'}{currency}{parseFloat(m.importo).toFixed(2)}
                 </span>
-                <button onClick={() => eliminaMovimento(m.id)} style={iconBtnStyle('#F1F5F9', '#94A3B8')}><Trash2 size={14} /></button>
+                <button onClick={() => eliminaMovimento(m.id)} style={iconBtnStyle('#F1F5F9', '#94A3B8')}>
+                  <Trash2 size={14} />
+                </button>
               </div>
             </div>
           ))}
