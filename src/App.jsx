@@ -10,7 +10,7 @@ import Fatture from './components/Fatture';
 import Finanze from './components/Finanze';
 import Login from './components/Login';
 import ResetPassword from './components/ResetPassword';
-import { Home, LogOut } from 'lucide-react';
+import { Home, LogOut, Settings } from 'lucide-react';
 import { useLang } from './LanguageContext';
 import logo from './assets/logo.png';
 import quokka from './assets/quokka.png';
@@ -50,8 +50,7 @@ export default function App() {
       .from('impostazioni').select('*').eq('user_id', user.id).single();
     setConfig(configData || {});
     const { data: clientiData } = await supabase
-      .from('clienti').select('*')
-      .eq('user_id', user.id).order('nome');
+      .from('clienti').select('*').eq('user_id', user.id).order('nome');
     setClienti(clientiData || []);
     const { data: appData } = await supabase
       .from('appuntamenti').select('*').eq('user_id', user.id);
@@ -101,10 +100,13 @@ export default function App() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F1F5F9', fontFamily: "'Baloo 2', sans-serif" }}>
 
-      {/* HEADER */}
-      <div style={headerKipriStyle}>
+      {/* ── HEADER ── */}
+      <div style={headerStyle}>
+
+        {/* LOGOUT — sinistra, visivamente separato */}
         <button
           onClick={async () => {
+            if (!window.confirm(t('logout') + '?')) return;
             await supabase.auth.signOut();
             setUser(null);
             setVista('DASHBOARD');
@@ -115,23 +117,30 @@ export default function App() {
           <LogOut size={18} color="#94A3B8" />
         </button>
 
+        {/* LOGO — centro assoluto */}
         <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center' }}>
           <img src={logo} alt="Kipri" style={{ height: '30px', width: 'auto' }}
             onError={e => { e.target.style.display = 'none'; }} />
         </div>
 
+        {/* DESTRA — lang switcher */}
         <div style={langSwitcherStyle}>
           <button onClick={() => switchLang('it')} style={langBtnStyle(lang === 'it')}>🇮🇹</button>
           <button onClick={() => switchLang('en')} style={langBtnStyle(lang === 'en')}>🇬🇧</button>
         </div>
+
       </div>
 
       <div style={{ maxWidth: '600px', margin: '0 auto', padding: '16px 20px 40px' }}>
 
-        {/* CARD HERO VIOLA — solo dashboard */}
+        {/* ── CARD HERO VIOLA — solo dashboard, cliccabile per impostazioni ── */}
         {vista === 'DASHBOARD' && (
-          <div style={heroCardStyle}>
-            {/* Quokka corner */}
+          <div
+            style={{ ...heroCardStyle, cursor: 'pointer' }}
+            onClick={() => setVista('IMPOSTAZIONI')}
+            title="Apri Impostazioni"
+          >
+            {/* Quokka */}
             <img src={quokka} alt=""
               style={{
                 position: 'absolute', bottom: '-8px', right: '12px',
@@ -140,40 +149,20 @@ export default function App() {
               }}
               onError={e => { e.target.style.display = 'none'; }}
             />
-            {/* Cerchi decorativi sfondo */}
-            <div style={{
-              position: 'absolute', top: '-30px', right: '-30px',
-              width: '120px', height: '120px', borderRadius: '50%',
-              background: 'rgba(255,255,255,0.06)', zIndex: 0,
-            }} />
-            <div style={{
-              position: 'absolute', bottom: '-20px', left: '-20px',
-              width: '80px', height: '80px', borderRadius: '50%',
-              background: 'rgba(112,193,142,0.15)', zIndex: 0,
-            }} />
+            {/* Cerchi decorativi */}
+            <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '120px', height: '120px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)', zIndex: 0 }} />
+            <div style={{ position: 'absolute', bottom: '-20px', left: '-20px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(112,193,142,0.15)', zIndex: 0 }} />
 
             {/* Logo + nome + settore */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', zIndex: 1, position: 'relative' }}>
               {config.logo_url ? (
-                <img src={config.logo_url} alt="Logo"
-                  style={{
-                    height: '44px', width: '44px', borderRadius: '12px',
-                    objectFit: 'contain', background: 'rgba(255,255,255,0.15)',
-                    border: '1.5px solid rgba(255,255,255,0.25)', padding: '5px', flexShrink: 0
-                  }}
-                />
+                <img src={config.logo_url} alt="Logo" style={{ height: '44px', width: '44px', borderRadius: '12px', objectFit: 'contain', background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.25)', padding: '5px', flexShrink: 0 }} />
               ) : (
-                <div style={{
-                  height: '44px', width: '44px', borderRadius: '12px',
-                  background: 'rgba(255,255,255,0.15)',
-                  border: '1.5px solid rgba(255,255,255,0.25)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '20px', flexShrink: 0,
-                }}>
+                <div style={{ height: '44px', width: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
                   🏢
                 </div>
               )}
-              <div>
+              <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: '800', fontSize: '18px', color: 'white', lineHeight: 1.2, fontFamily: "'Baloo 2', sans-serif" }}>
                   {config.nome_azienda || 'La tua Azienda'}
                 </div>
@@ -182,6 +171,10 @@ export default function App() {
                     {config.settore}
                   </div>
                 )}
+              </div>
+              {/* Settings hint */}
+              <div style={{ opacity: 0.5 }}>
+                <Settings size={16} color="white" />
               </div>
             </div>
 
@@ -202,17 +195,22 @@ export default function App() {
           </div>
         )}
 
-        {/* BOTTONE HOME */}
+        {/* ── BOTTONE HOME (con label) — solo quando non in dashboard ── */}
         {vista !== 'DASHBOARD' && (
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-            <button onClick={() => setVista('DASHBOARD')}
-              style={{ background: 'white', border: 'none', borderRadius: '14px', padding: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', touchAction: 'manipulation' }}>
-              <Home size={20} color="#5D5C9E" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+            <button
+              onClick={() => setVista('DASHBOARD')}
+              style={homeBtnStyle}
+            >
+              <Home size={18} color="#5D5C9E" />
+              <span style={{ fontFamily: "'Baloo 2', sans-serif", fontSize: '13px', fontWeight: '700', color: '#5D5C9E' }}>
+                Home
+              </span>
             </button>
           </div>
         )}
 
-        {/* VISTE */}
+        {/* ── VISTE ── */}
         {vista === 'DASHBOARD' && <Dashboard setView={setVista} config={config} appuntamenti={appuntamenti} />}
         {vista === 'RUBRICA' && (
           <Rubrica clienti={clienti} setMostraModuloApp={setMostraModuloApp} setFormApp={setFormApp}
@@ -233,7 +231,7 @@ export default function App() {
 
       </div>
 
-      {/* MODALE CLIENTE — fuori dal container per coprire tutto lo schermo */}
+      {/* MODALE CLIENTE */}
       {mostraModuloCliente && (
         <ModaleCliente
           clienteInModifica={clienteInModifica}
@@ -244,7 +242,7 @@ export default function App() {
         />
       )}
 
-      {/* MODALE APPUNTAMENTO — fuori dal container per coprire tutto lo schermo */}
+      {/* MODALE APPUNTAMENTO */}
       {mostraModuloApp && (
         <ModaleAppuntamento
           formApp={formApp}
@@ -258,53 +256,43 @@ export default function App() {
   );
 }
 
-const headerKipriStyle = {
+const headerStyle = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-  padding: '0 20px', height: '60px', background: 'white',
+  padding: '0 16px', height: '60px', background: 'white',
   boxShadow: '0 1px 8px rgba(0,0,0,0.06)', position: 'sticky', top: 0, zIndex: 50,
-  position: 'relative',
 };
+
 const logoutBtnStyle = {
-  background: '#F1F5F9', border: 'none', borderRadius: '12px', padding: '8px',
-  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+  background: '#FEF2F2', border: '1.5px solid #FECACA',
+  borderRadius: '12px', padding: '8px 10px',
+  cursor: 'pointer', display: 'flex', alignItems: 'center',
+  justifyContent: 'center', gap: '6px',
   touchAction: 'manipulation',
 };
+
+const homeBtnStyle = {
+  background: 'white', border: 'none', borderRadius: '14px',
+  padding: '10px 16px', cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  gap: '6px',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+  touchAction: 'manipulation',
+  WebkitTapHighlightColor: 'transparent',
+};
+
 const heroCardStyle = {
   background: 'linear-gradient(135deg, #5D5C9E 0%, #4a4980 100%)',
   borderRadius: '24px', padding: '22px 20px 28px',
   marginBottom: '20px', position: 'relative', overflow: 'hidden',
   boxShadow: '0 8px 32px rgba(93,92,158,0.35)',
 };
+
 const langSwitcherStyle = {
   display: 'flex', gap: '4px', background: '#F1F5F9', padding: '3px', borderRadius: '10px',
 };
+
 const langBtnStyle = (active) => ({
   border: 'none', background: active ? 'white' : 'transparent',
   borderRadius: '8px', padding: '4px 8px', cursor: 'pointer', fontSize: '16px',
   boxShadow: active ? '0 1px 4px rgba(0,0,0,0.1)' : 'none', transition: 'all 0.2s',
 });
-const overlayStyle = {
-  position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-  backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex',
-  alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px',
-};
-const modalStyle = {
-  background: 'white', padding: '24px', borderRadius: '24px',
-  width: '100%', maxWidth: '400px', boxSizing: 'border-box',
-  boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-};
-const inputStyle = {
-  width: '100%', padding: '12px 14px', borderRadius: '12px',
-  border: '1.5px solid #E2E8F0', boxSizing: 'border-box',
-  fontFamily: "'Baloo 2', sans-serif", fontSize: '14px', color: '#1E293B', outline: 'none',
-};
-const saveBtn = {
-  flex: 1, background: '#5D5C9E', color: 'white', border: 'none',
-  padding: '12px', borderRadius: '12px', fontWeight: '800',
-  cursor: 'pointer', fontFamily: "'Baloo 2', sans-serif", fontSize: '15px',
-};
-const cancelBtn = {
-  flex: 1, background: '#F1F5F9', color: '#64748B', border: 'none',
-  padding: '12px', borderRadius: '12px', fontWeight: '800',
-  cursor: 'pointer', fontFamily: "'Baloo 2', sans-serif", fontSize: '15px',
-};
