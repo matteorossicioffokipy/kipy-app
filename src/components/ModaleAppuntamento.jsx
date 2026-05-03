@@ -10,8 +10,9 @@ const overlayStyle = {
 
 const modalStyle = {
   background: 'white', padding: '24px', borderRadius: '24px',
-  width: '100%', maxWidth: '400px',
+  width: 'calc(100% - 40px)', maxWidth: '400px',
   boxSizing: 'border-box',
+  overflow: 'hidden',
   boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
 };
 
