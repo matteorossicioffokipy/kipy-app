@@ -61,7 +61,7 @@ export default function ModaleFinanza({ onSalva, onAnnulla }) {
         <div style={{ display: 'flex', gap: '10px' }}>
           <button onClick={onAnnulla} style={cancelBtn}>{t('cancel')}</button>
           <button onClick={handleSalva} style={{ ...saveBtn, background: isEntrata ? '#15803D' : '#EF4444' }}>
-            {isEntrata ? t('finanze_addIncome') : t('finanze_addExpense')}
+            {isEntrata ? (lang === 'it' ? '+ Entrata' : '+ Income') : (lang === 'it' ? '- Uscita' : '- Expense')}
           </button>
         </div>
       </div>
