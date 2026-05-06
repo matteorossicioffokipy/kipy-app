@@ -36,17 +36,15 @@ export default function ModaleFinanza({ onSalva, onAnnulla }) {
           <button onClick={() => setTipo('uscita')} style={tabBtn(!isEntrata, '#EF4444')}>{t('finanze_expense_tab')}</button>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <label style={lbl}>{lang === 'it' ? `Importo ${currency}` : `Amount ${currency}`}</label>
-            <input style={inp} type="number" step="0.01" placeholder="0.00" value={form.importo}
-              onChange={e => setForm({ ...form, importo: e.target.value })} />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <label style={lbl}>{lang === 'it' ? 'Data' : 'Date'}</label>
-            <input style={inp} type="date" value={form.data}
-              onChange={e => setForm({ ...form, data: e.target.value })} />
-          </div>
+        <div style={{ marginBottom: '12px' }}>
+          <label style={lbl}>{lang === 'it' ? `Importo ${currency}` : `Amount ${currency}`}</label>
+          <input style={inp} type="number" step="0.01" placeholder="0.00" value={form.importo}
+            onChange={e => setForm({ ...form, importo: e.target.value })} />
+        </div>
+        <div style={{ marginBottom: '12px' }}>
+          <label style={lbl}>{lang === 'it' ? 'Data' : 'Date'}</label>
+          <input style={inp} type="date" value={form.data}
+            onChange={e => setForm({ ...form, data: e.target.value })} />
         </div>
 
         <div style={{ marginBottom: '12px' }}>
