@@ -30,13 +30,35 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
   const handleLogoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // Nome fisso basato su user_id — sovrascrive sempre lo stesso file
     const fileExt = file.name.split('.').pop();
-    const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-    const filePath = `logos/${fileName}`;
-    await supabase.storage.from('azienda-assets').upload(filePath, file);
-    const { data: { publicUrl } } = supabase.storage.from('azienda-assets').getPublicUrl(filePath);
-    await supabase.from('impostazioni').update({ logo_url: publicUrl }).eq('user_id', user.id);
-    fetchDati();
+    const filePath = `logos/${user.id}.${fileExt}`;
+
+    // Carica (upsert: sovrascrive se esiste già)
+    const { error: uploadError } = await supabase.storage
+      .from('azienda-assets')
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) {
+      alert('Errore caricamento logo: ' + uploadError.message);
+      return;
+    }
+
+    // Ottieni URL pubblico + timestamp per burstare la cache del browser
+    const { data: { publicUrl } } = supabase.storage
+      .from('azienda-assets')
+      .getPublicUrl(filePath);
+
+    const urlConTimestamp = `${publicUrl}?t=${Date.now()}`;
+
+    // Salva su Supabase
+    await supabase.from('impostazioni')
+      .update({ logo_url: urlConTimestamp })
+      .eq('user_id', user.id);
+
+    // Aggiorna subito il config locale — nessun reload necessario
+    setConfig(prev => ({ ...prev, logo_url: urlConTimestamp }));
   };
 
   const handleUpgradePro = async () => {
@@ -196,7 +218,7 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
           {t('impostazioni_logo')}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginTop: '10px' }}>
-          {config.logo_url && <img src={config.logo_url} alt="Logo" style={{ height: '50px', borderRadius: '10px' }} />}
+          {config.logo_url && <img src={config.logo_url} alt="Logo" key={config.logo_url} style={{ height: '50px', borderRadius: '10px', objectFit: 'contain' }} />}
           <label style={uploadBtnStyle}>
             <Upload size={18} /> {t('impostazioni_uploadLogo')}
             <input type="file" hidden onChange={handleLogoUpload} accept="image/*" />
