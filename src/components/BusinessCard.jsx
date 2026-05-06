@@ -207,7 +207,7 @@ END:VCARD`;
 
         <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #F1F5F9', display: 'flex', justifyContent: 'flex-end' }}>
           <span style={{ fontSize: '10px', color: '#CBD5E1', fontWeight: '600', letterSpacing: '1px' }}>
-            via KIPY
+            powered by KIPRI
           </span>
         </div>
       </div>

@@ -148,7 +148,7 @@ export const translations = {
     bc_vatField: 'P.IVA',
     bc_hoursField: 'Orari',
     bc_touch: 'Tocca per chiudere',
-    bc_via: 'via KIPY',
+    bc_via: 'powered by KIPRI',
 
     // LOGIN
     login_welcome: 'Bentornato',
@@ -323,7 +323,7 @@ export const translations = {
     bc_vatField: 'VAT Number',
     bc_hoursField: 'Opening hours',
     bc_touch: 'Tap to close',
-    bc_via: 'via KIPY',
+    bc_via: 'powered by KIPRI',
 
     // LOGIN
     login_welcome: 'Welcome back',
