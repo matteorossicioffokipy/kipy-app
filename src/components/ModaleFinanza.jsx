@@ -31,7 +31,7 @@ export default function ModaleFinanza({ onSalva, onAnnulla }) {
       <div style={modal}>
         <h3 style={title}>{lang === 'it' ? 'Nuovo movimento' : 'New transaction'}</h3>
 
-        <div style={{ display: 'flex', gap: '4px', background: '#F1F5F9', padding: '3px', borderRadius: '12px', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', gap: '4px', background: '#F1F5F9', padding: '4px', borderRadius: '12px', marginBottom: '16px', width: '100%', boxSizing: 'border-box' }}>
           <button onClick={() => setTipo('entrata')} style={tabBtn(isEntrata, '#15803D')}>{t('finanze_income_tab')}</button>
           <button onClick={() => setTipo('uscita')} style={tabBtn(!isEntrata, '#EF4444')}>{t('finanze_expense_tab')}</button>
         </div>
@@ -79,4 +79,4 @@ const lbl = { display: 'block', fontSize: '12px', fontWeight: '700', color: '#64
 const inp = { display: 'block', width: '100%', padding: '11px 13px', borderRadius: '12px', border: '1.5px solid #E2E8F0', boxSizing: 'border-box', fontFamily: "'Baloo 2', sans-serif", fontSize: '14px', color: '#1E293B', outline: 'none', background: '#F8FAFC', WebkitAppearance: 'none', height: '46px', lineHeight: '1.4' };
 const saveBtn = { flex: 1, color: 'white', border: 'none', padding: '13px', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', fontFamily: "'Baloo 2', sans-serif", fontSize: '15px' };
 const cancelBtn = { flex: 1, background: '#F1F5F9', color: '#64748B', border: 'none', padding: '13px', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', fontFamily: "'Baloo 2', sans-serif", fontSize: '15px' };
-const tabBtn = (active, color) => ({ flex: 1, border: 'none', background: active ? color : 'transparent', color: active ? 'white' : '#64748B', padding: '8px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '13px', fontFamily: "'Baloo 2', sans-serif" });
+const tabBtn = (active, color) => ({ flex: 1, border: 'none', background: active ? color : 'transparent', color: active ? 'white' : '#64748B', padding: '10px 8px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', fontFamily: "'Baloo 2', sans-serif", whiteSpace: 'nowrap', minWidth: 0 });
