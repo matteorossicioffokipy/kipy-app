@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Clock, Trash2, Plus, Calendar as CalIcon, MessageCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Trash2, Plus, Calendar as CalIcon, MessageCircle, Pencil, FileText } from 'lucide-react';
 import { useLang } from '../LanguageContext';
+import ModaleAppuntamento from './ModaleAppuntamento';
 
 export default function Calendario({ appuntamenti, setMostraModuloApp, supabase, fetchDati, config, clienti }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const oggiCorretto = new Date().toLocaleDateString('en-CA');
   const [dataSelezionata, setDataSelezionata] = useState(oggiCorretto);
   const [meseVisualizzato, setMeseVisualizzato] = useState(new Date());
   const [vistaSettimanale, setVistaSettimanale] = useState(false);
+  const [appModifica, setAppModifica] = useState(null);
+  const [formModifica, setFormModifica] = useState({});
+  const [noteAperte, setNoteAperte] = useState(null);
 
   const orangeKipy = '#FFB347';
   const lightOrange = '#FFF7ED';
@@ -50,10 +54,24 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
 
   const isOggi = (date) => date && formattaLocale(date) === oggiCorretto;
   const isSelezionato = (date) => date && formattaLocale(date) === dataSelezionata;
-  const haAppuntamenti = (date) => date && (appuntamenti || []).some(a => a.data === formattaLocale(date));
+
+  // Supporto multi-giorno: un appuntamento appare su tutti i giorni del suo periodo
+  const haAppuntamenti = (date) => {
+    if (!date) return false;
+    const dateStr = formattaLocale(date);
+    return (appuntamenti || []).some(a => {
+      const start = a.data;
+      const end = a.data_fine || a.data;
+      return dateStr >= start && dateStr <= end;
+    });
+  };
 
   const appuntamentiGiorno = (appuntamenti || [])
-    .filter(a => a.data === dataSelezionata)
+    .filter(a => {
+      const start = a.data;
+      const end = a.data_fine || a.data;
+      return dataSelezionata >= start && dataSelezionata <= end;
+    })
     .sort((a, b) => a.ora.localeCompare(b.ora));
 
   const eliminaAppuntamento = async (id) => {
@@ -61,6 +79,33 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
       const { error } = await supabase.from('appuntamenti').delete().eq('id', id);
       if (!error) fetchDati();
     }
+  };
+
+  const apriModifica = (app) => {
+    setFormModifica({
+      titolo: app.titolo,
+      data: app.data,
+      data_fine: app.data_fine || app.data,
+      ora: app.ora,
+      ora_fine: app.ora_fine || '',
+      note: app.note || '',
+      note_dettagliate: app.note_dettagliate || '',
+    });
+    setAppModifica(app);
+  };
+
+  const salvaModifica = async () => {
+    const { error } = await supabase.from('appuntamenti').update({
+      titolo: formModifica.titolo,
+      data: formModifica.data,
+      data_fine: formModifica.data_fine || formModifica.data,
+      ora: formModifica.ora,
+      ora_fine: formModifica.ora_fine || null,
+      note: formModifica.note || null,
+      note_dettagliate: formModifica.note_dettagliate || null,
+    }).eq('id', appModifica.id);
+    if (!error) { setAppModifica(null); fetchDati(); }
+    else alert('Errore: ' + error.message);
   };
 
   const inviaPromemoria = (app) => {
@@ -85,9 +130,12 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
     }
   };
 
+  const isMultiGiorno = (app) => app.data_fine && app.data_fine !== app.data;
+
   return (
     <div style={{ animation: 'fadeIn 0.5s ease', paddingBottom: '100px', width: '100%', fontFamily: "'Baloo 2', sans-serif" }}>
 
+      {/* CALENDARIO */}
       <div style={{ background: 'white', padding: '15px', borderRadius: '25px', marginBottom: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.02)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -131,37 +179,95 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
         </div>
       </div>
 
+      {/* DATA SELEZIONATA */}
       <div style={{ paddingLeft: '5px', marginBottom: '12px' }}>
         <h3 style={{ fontSize: '12px', fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase' }}>
           {(() => {
             const pezzi = dataSelezionata.split('-');
-            return new Date(pezzi[0], pezzi[1] - 1, pezzi[2]).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
+            return new Date(pezzi[0], pezzi[1] - 1, pezzi[2]).toLocaleDateString(lang === 'it' ? 'it-IT' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
           })()}
         </h3>
       </div>
 
+      {/* APPUNTAMENTI */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {appuntamentiGiorno.length > 0 ? appuntamentiGiorno.map(app => (
-          <div key={app.id} style={{ background: 'white', padding: '15px', borderRadius: '22px', boxShadow: '0 5px 15px rgba(0,0,0,0.02)', borderLeft: `4px solid ${orangeKipy}` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '2px' }}>
-                  <Clock size={12} color={orangeKipy} />
-                  <span style={{ fontSize: '12px', fontWeight: '800', color: orangeKipy }}>{app.ora.slice(0, 5)}</span>
+          <div key={app.id}>
+            <div style={{ background: 'white', padding: '15px', borderRadius: '22px', boxShadow: '0 5px 15px rgba(0,0,0,0.02)', borderLeft: `4px solid ${orangeKipy}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ flex: 1 }}>
+                  {/* ORARIO */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '2px' }}>
+                    <Clock size={12} color={orangeKipy} />
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: orangeKipy }}>
+                      {app.ora.slice(0, 5)}
+                      {app.ora_fine ? ` → ${app.ora_fine.slice(0, 5)}` : ''}
+                    </span>
+                    {isMultiGiorno(app) && (
+                      <span style={{ fontSize: '10px', background: '#FFF7ED', color: orangeKipy, padding: '1px 8px', borderRadius: '20px', fontWeight: '700' }}>
+                        {lang === 'it' ? 'Multi-giorno' : 'Multi-day'}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* TITOLO */}
+                  <div style={{ fontWeight: '800', fontSize: '14px', color: '#1E293B' }}>{app.titolo}</div>
+
+                  {/* PERIODO */}
+                  {isMultiGiorno(app) && (
+                    <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
+                      {new Date(app.data + 'T00:00:00').toLocaleDateString(lang === 'it' ? 'it-IT' : 'en-GB', { day: 'numeric', month: 'short' })}
+                      {' → '}
+                      {new Date(app.data_fine + 'T00:00:00').toLocaleDateString(lang === 'it' ? 'it-IT' : 'en-GB', { day: 'numeric', month: 'short' })}
+                    </div>
+                  )}
+
+                  {/* NOTE BREVI */}
+                  {app.note && <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px', fontStyle: 'italic' }}>{app.note}</div>}
                 </div>
-                <div style={{ fontWeight: '800', fontSize: '14px', color: '#1E293B' }}>{app.titolo}</div>
-                {app.note && <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px', fontStyle: 'italic' }}>{app.note}</div>}
-              </div>
-              <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                {proMemoriaAttivo && (
-                  <button onClick={() => inviaPromemoria(app)} style={{ background: '#DCFCE7', border: 'none', color: '#15803D', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }} title={t('reminder_sent')}>
-                    <MessageCircle size={16} />
+
+                {/* BOTTONI */}
+                <div style={{ display: 'flex', gap: '6px', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  {app.note_dettagliate && (
+                    <button
+                      onClick={() => setNoteAperte(noteAperte === app.id ? null : app.id)}
+                      style={{ background: '#F0F0FA', border: 'none', color: '#5D5C9E', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}
+                      title={lang === 'it' ? 'Note dettagliate' : 'Detailed notes'}
+                    >
+                      <FileText size={16} />
+                    </button>
+                  )}
+                  {proMemoriaAttivo && (
+                    <button onClick={() => inviaPromemoria(app)} style={{ background: '#DCFCE7', border: 'none', color: '#15803D', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}>
+                      <MessageCircle size={16} />
+                    </button>
+                  )}
+                  <button onClick={() => apriModifica(app)} style={{ background: '#EFF6FF', border: 'none', color: '#3B82F6', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}>
+                    <Pencil size={16} />
                   </button>
-                )}
-                <button onClick={() => eliminaAppuntamento(app.id)} style={{ background: '#FEF2F2', border: 'none', color: '#EF4444', padding: '8px', borderRadius: '10px', cursor: 'pointer', touchAction: 'manipulation' }}>
-                  <Trash2 size={16} />
-                </button>
+                  <button onClick={() => eliminaAppuntamento(app.id)} style={{ background: '#FEF2F2', border: 'none', color: '#EF4444', padding: '8px', borderRadius: '10px', cursor: 'pointer', touchAction: 'manipulation' }}>
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
+
+              {/* NOTE DETTAGLIATE ESPANDIBILI */}
+              {noteAperte === app.id && app.note_dettagliate && (
+                <div style={{
+                  marginTop: '12px',
+                  background: '#F8FAFC',
+                  borderRadius: '12px',
+                  padding: '14px',
+                  borderLeft: '3px solid #5D5C9E',
+                }}>
+                  <div style={{ fontSize: '10px', fontWeight: '800', color: '#5D5C9E', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                    📝 {lang === 'it' ? 'Note dettagliate' : 'Detailed notes'}
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#1E293B', lineHeight: '1.7', whiteSpace: 'pre-wrap', fontFamily: "'Baloo 2', sans-serif" }}>
+                    {app.note_dettagliate}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )) : (
@@ -171,9 +277,21 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
         )}
       </div>
 
+      {/* FAB */}
       <button onClick={() => setMostraModuloApp(true)} style={{ position: 'fixed', bottom: '30px', right: '20px', width: '64px', height: '64px', borderRadius: '20px', background: orangeKipy, color: 'white', border: 'none', boxShadow: `0 10px 20px ${orangeKipy}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation', cursor: 'pointer' }}>
         <Plus size={28} />
       </button>
+
+      {/* MODALE MODIFICA */}
+      {appModifica && (
+        <ModaleAppuntamento
+          formApp={formModifica}
+          setFormApp={setFormModifica}
+          onSalva={salvaModifica}
+          onAnnulla={() => setAppModifica(null)}
+          isEdit={true}
+        />
+      )}
     </div>
   );
 }

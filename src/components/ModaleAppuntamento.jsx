@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLang } from '../LanguageContext';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
-export default function ModaleAppuntamento({ formApp, setFormApp, onSalva, onAnnulla }) {
-  const { t } = useLang();
+export default function ModaleAppuntamento({ formApp, setFormApp, onSalva, onAnnulla, isEdit }) {
+  const { t, lang } = useLang();
+  const [mostraNoteDettagliate, setMostraNoteDettagliate] = useState(!!(formApp.note_dettagliate));
 
   return (
     <div
@@ -24,38 +26,124 @@ export default function ModaleAppuntamento({ formApp, setFormApp, onSalva, onAnn
         borderRadius: '24px',
         padding: '24px',
         width: '100%',
-        maxWidth: '360px',
+        maxWidth: '380px',
         boxSizing: 'border-box',
         boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
-        overflow: 'hidden',
+        maxHeight: '90vh',
+        overflowY: 'auto',
       }}>
 
         <h3 style={{ margin: '0 0 20px', fontFamily: "'Baloo 2', sans-serif", fontSize: '18px', fontWeight: '800', color: '#1E293B' }}>
-          {t('appt_title')}
+          {isEdit
+            ? (lang === 'it' ? '✏️ Modifica appuntamento' : '✏️ Edit appointment')
+            : t('appt_title')}
         </h3>
 
+        {/* TITOLO */}
         <div style={{ marginBottom: '14px' }}>
-          <label style={lbl}>Titolo</label>
+          <label style={lbl}>{lang === 'it' ? 'Titolo' : 'Title'}</label>
           <input style={inp} placeholder={t('appt_titleField')} value={formApp.titolo}
             onChange={e => setFormApp({ ...formApp, titolo: e.target.value })} />
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <label style={lbl}>Data</label>
-            <input style={inp} type="date" value={formApp.data}
-              onChange={e => setFormApp({ ...formApp, data: e.target.value })} />
+        {/* DATA INIZIO - FINE */}
+        <div style={{ marginBottom: '14px' }}>
+          <label style={lbl}>{lang === 'it' ? 'Periodo' : 'Period'}</label>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: '700', marginBottom: '4px', fontFamily: "'Baloo 2', sans-serif" }}>
+                {lang === 'it' ? 'Dal' : 'From'}
+              </div>
+              <input style={inp} type="date" value={formApp.data}
+                onChange={e => setFormApp({ ...formApp, data: e.target.value })} />
+            </div>
+            <div style={{ color: '#CBD5E1', fontSize: '18px', marginTop: '18px' }}>→</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: '700', marginBottom: '4px', fontFamily: "'Baloo 2', sans-serif" }}>
+                {lang === 'it' ? 'Al' : 'To'}
+              </div>
+              <input style={inp} type="date" value={formApp.data_fine || formApp.data}
+                min={formApp.data}
+                onChange={e => setFormApp({ ...formApp, data_fine: e.target.value })} />
+            </div>
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <label style={lbl}>Ora</label>
-            <input style={inp} type="time" value={formApp.ora}
-              onChange={e => setFormApp({ ...formApp, ora: e.target.value })} />
+        </div>
+
+        {/* ORA INIZIO - FINE */}
+        <div style={{ marginBottom: '14px' }}>
+          <label style={lbl}>{lang === 'it' ? 'Orario' : 'Time'}</label>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: '700', marginBottom: '4px', fontFamily: "'Baloo 2', sans-serif" }}>
+                {lang === 'it' ? 'Dalle' : 'From'}
+              </div>
+              <input style={inp} type="time" value={formApp.ora}
+                onChange={e => setFormApp({ ...formApp, ora: e.target.value })} />
+            </div>
+            <div style={{ color: '#CBD5E1', fontSize: '18px', marginTop: '18px' }}>→</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: '700', marginBottom: '4px', fontFamily: "'Baloo 2', sans-serif" }}>
+                {lang === 'it' ? 'Alle' : 'To'}
+              </div>
+              <input style={inp} type="time" value={formApp.ora_fine || ''}
+                onChange={e => setFormApp({ ...formApp, ora_fine: e.target.value })} />
+            </div>
           </div>
+        </div>
+
+        {/* NOTE BREVI */}
+        <div style={{ marginBottom: '14px' }}>
+          <label style={lbl}>Note</label>
+          <input style={inp} placeholder={lang === 'it' ? 'Note brevi...' : 'Quick notes...'}
+            value={formApp.note || ''}
+            onChange={e => setFormApp({ ...formApp, note: e.target.value })} />
+        </div>
+
+        {/* NOTE DETTAGLIATE */}
+        <div style={{ marginBottom: '20px' }}>
+          <button
+            onClick={() => setMostraNoteDettagliate(!mostraNoteDettagliate)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              background: '#F8FAFC', border: '1.5px solid #E2E8F0', borderRadius: '12px',
+              padding: '11px 14px', cursor: 'pointer', fontFamily: "'Baloo 2', sans-serif",
+              fontSize: '13px', fontWeight: '700', color: '#5D5C9E',
+            }}
+          >
+            <span>📝 {lang === 'it' ? 'Note dettagliate' : 'Detailed notes'}</span>
+            {mostraNoteDettagliate ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+
+          {mostraNoteDettagliate && (
+            <div style={{ marginTop: '8px' }}>
+              <textarea
+                style={{
+                  ...inp,
+                  minHeight: '140px',
+                  resize: 'vertical',
+                  lineHeight: '1.6',
+                  fontSize: '14px',
+                }}
+                placeholder={lang === 'it'
+                  ? 'Es: Shot list, attrezzatura necessaria, dettagli cliente, riferimenti creativi...'
+                  : 'E.g: Shot list, required equipment, client details, creative references...'}
+                value={formApp.note_dettagliate || ''}
+                onChange={e => setFormApp({ ...formApp, note_dettagliate: e.target.value })}
+              />
+              <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px', fontFamily: "'Baloo 2', sans-serif" }}>
+                {lang === 'it'
+                  ? 'Spazio libero per appunti, checklist e tutto ciò che ti serve per questo appuntamento.'
+                  : 'Free space for notes, checklists and everything you need for this appointment.'}
+              </p>
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', gap: '10px' }}>
           <button onClick={onAnnulla} style={cancelBtn}>{t('cancel')}</button>
-          <button onClick={onSalva} style={saveBtn}>{t('save')}</button>
+          <button onClick={onSalva} style={saveBtn}>
+            {isEdit ? (lang === 'it' ? '✓ Salva modifiche' : '✓ Save changes') : t('save')}
+          </button>
         </div>
 
       </div>
