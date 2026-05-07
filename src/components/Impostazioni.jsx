@@ -18,6 +18,8 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
       promemoria_attivo: config.promemoria_attivo ?? true,
       promemoria_anticipo: config.promemoria_anticipo ?? '24',
       promemoria_testo: config.promemoria_testo ?? '',
+      iban: config.iban ?? '',
+      nome_banca: config.nome_banca ?? '',
     }).eq('user_id', user.id);
     if (!error) {
       setSalvato(true);
@@ -283,6 +285,27 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
             </div>
           </>
         )}
+      </div>
+
+      {/* COORDINATE BANCARIE */}
+      <div style={sectionStyle}>
+        <div style={sectionTitleStyle}>
+          <div style={sectionIconStyle('#EEEEF8')}><span style={{ fontSize: '14px' }}>🏦</span></div>
+          {lang === 'it' ? 'Coordinate bancarie' : 'Payment details'}
+        </div>
+        <label style={labelStyle}>IBAN</label>
+        <input style={inputStyle}
+          value={config.iban || ''}
+          onChange={(e) => setConfig({ ...config, iban: e.target.value })}
+          placeholder="IT60 X054 2811 1010 0000 0123 456" />
+        <label style={{ ...labelStyle, marginTop: '10px' }}>{lang === 'it' ? 'Nome banca' : 'Bank name'}</label>
+        <input style={inputStyle}
+          value={config.nome_banca || ''}
+          onChange={(e) => setConfig({ ...config, nome_banca: e.target.value })}
+          placeholder={lang === 'it' ? 'Es: Banca Intesa, Revolut...' : 'E.g. Barclays, Revolut...'} />
+        <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>
+          {lang === 'it' ? 'Apparirà automaticamente sulle fatture emesse.' : 'Will appear automatically on issued invoices.'}
+        </p>
       </div>
 
       {/* SALVA */}

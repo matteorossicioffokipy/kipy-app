@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, FileText, Download, Trash2 } from 'lucide-react';
+import { Plus, FileText, Download, Trash2, Mail } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 import ModaleFattura from './ModaleFattura';
 
@@ -7,6 +7,7 @@ export default function Fatture({ supabase, user, clienti, config }) {
   const { t, lang } = useLang();
   const [fatture, setFatture] = useState([]);
   const [mostraModale, setMostraModale] = useState(false);
+  const [invioEmail, setInvioEmail] = useState(null);
   const currency = lang === 'it' ? '€' : '£';
 
   const fetchFatture = async () => {
@@ -38,61 +39,240 @@ export default function Fatture({ supabase, user, clienti, config }) {
     fetchFatture();
   };
 
-  const scaricaPDF = (fattura) => {
+  const generaHTML = (fattura) => {
     const cliente = clienti.find(c => c.id === fattura.cliente_id);
     const servizi = fattura.servizi || [];
     const subtot = servizi.reduce((a, s) => a + (parseFloat(s.prezzo) || 0) * (parseInt(s.quantita) || 1), 0);
     const ivaImp = subtot * (fattura.iva / 100);
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/>
-    <style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Arial,sans-serif;color:#1E293B;padding:40px;font-size:13px;}
-    .header{display:flex;justify-content:space-between;margin-bottom:40px;border-bottom:3px solid #5D5C9E;padding-bottom:24px;}
-    h1{font-size:26px;color:#5D5C9E;font-weight:900;}.ar{text-align:right;font-size:12px;color:#64748B;line-height:1.6;}
-    .ft{font-size:22px;font-weight:800;color:#5D5C9E;margin-bottom:6px;}
-    .meta{display:flex;gap:32px;margin-bottom:28px;}.mb{background:#F8F9FF;border-radius:10px;padding:12px 18px;}
-    .ml{font-size:10px;color:#94A3B8;text-transform:uppercase;}.mv{font-size:14px;font-weight:700;color:#1E293B;margin-top:2px;}
-    .cb{background:#F8F9FF;border-radius:10px;padding:14px 18px;margin-bottom:28px;}
-    .cb h3{font-size:10px;color:#94A3B8;text-transform:uppercase;margin-bottom:6px;}
-    table{width:100%;border-collapse:collapse;margin-bottom:20px;}
-    th{background:#5D5C9E;color:white;padding:9px 12px;text-align:left;font-size:11px;}
-    td{padding:9px 12px;border-bottom:1px solid #F1F5F9;font-size:12px;}
-    .tot{display:flex;justify-content:flex-end;}.tb{width:240px;}
-    .tr{display:flex;justify-content:space-between;padding:6px 0;font-size:12px;border-bottom:1px solid #F1F5F9;}
-    .tf{display:flex;justify-content:space-between;padding:10px 0;font-size:15px;font-weight:800;color:#5D5C9E;}
-    .foot{margin-top:40px;text-align:center;font-size:11px;color:#94A3B8;border-top:1px solid #F1F5F9;padding-top:14px;}
-    </style></head><body>
-    <div class="header">
-      <div>${config?.logo_url ? `<img src="${config.logo_url}" style="height:46px"/>` : `<h1>${config?.nome_azienda || 'KIPRI'}</h1>`}</div>
-      <div class="ar"><p style="font-size:14px;font-weight:800;color:#1E293B;">${config?.nome_azienda || ''}</p><p>${config?.settore || ''}</p><p>${config?.email_business || ''}</p></div>
+    const isIT = lang === 'it';
+
+    return `<!DOCTYPE html>
+<html lang="${isIT ? 'it' : 'en'}">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>${isIT ? 'Fattura' : 'Invoice'} #${fattura.numero}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Inter',Arial,sans-serif; color:#1E293B; background:#F8FAFC; padding:0; font-size:13px; }
+    .page { background:white; max-width:794px; margin:0 auto; padding:56px; min-height:1123px; position:relative; }
+    
+    /* HEADER */
+    .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:48px; padding-bottom:32px; border-bottom:2px solid #F1F5F9; }
+    .logo-area img { height:52px; object-fit:contain; }
+    .logo-area .company-name { font-size:22px; font-weight:900; color:#5D5C9E; }
+    .company-info { text-align:right; }
+    .company-info .name { font-size:16px; font-weight:800; color:#1E293B; margin-bottom:4px; }
+    .company-info p { font-size:12px; color:#64748B; line-height:1.7; }
+
+    /* INVOICE TITLE AREA */
+    .title-row { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:32px; }
+    .invoice-label { font-size:36px; font-weight:900; color:#5D5C9E; letter-spacing:-1px; }
+    .invoice-badge { background:#F0F0FA; border-radius:12px; padding:8px 16px; text-align:right; }
+    .invoice-badge .num-label { font-size:10px; color:#94A3B8; text-transform:uppercase; letter-spacing:1px; }
+    .invoice-badge .num-value { font-size:20px; font-weight:900; color:#5D5C9E; }
+
+    /* META */
+    .meta-row { display:flex; gap:16px; margin-bottom:32px; }
+    .meta-box { background:#F8FAFC; border:1px solid #F1F5F9; border-radius:12px; padding:14px 20px; flex:1; }
+    .meta-box .label { font-size:10px; color:#94A3B8; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
+    .meta-box .value { font-size:14px; font-weight:700; color:#1E293B; }
+
+    /* BILLED TO / FROM */
+    .parties { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:32px; }
+    .party-box { background:#F8FAFC; border:1px solid #F1F5F9; border-radius:12px; padding:16px 20px; }
+    .party-box .party-label { font-size:10px; color:#94A3B8; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+    .party-box .party-name { font-size:15px; font-weight:800; color:#1E293B; margin-bottom:4px; }
+    .party-box p { font-size:12px; color:#64748B; line-height:1.7; }
+
+    /* TABLE */
+    table { width:100%; border-collapse:collapse; margin-bottom:24px; }
+    thead tr { background:#5D5C9E; }
+    th { color:white; padding:12px 16px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
+    th:first-child { border-radius:10px 0 0 10px; }
+    th:last-child { border-radius:0 10px 10px 0; }
+    td { padding:13px 16px; border-bottom:1px solid #F1F5F9; font-size:13px; }
+    tbody tr:last-child td { border-bottom:none; }
+    tbody tr:nth-child(even) td { background:#FAFBFF; }
+
+    /* TOTALS */
+    .totals-wrapper { display:flex; justify-content:flex-end; margin-bottom:32px; }
+    .totals-box { width:280px; }
+    .total-row { display:flex; justify-content:space-between; padding:8px 0; font-size:13px; border-bottom:1px solid #F1F5F9; color:#64748B; }
+    .total-final { display:flex; justify-content:space-between; padding:14px 20px; font-size:18px; font-weight:900; color:white; background:#5D5C9E; border-radius:12px; margin-top:8px; }
+
+    /* PAYMENT INFO */
+    .payment-box { background:#F0F0FA; border-radius:12px; padding:16px 20px; margin-bottom:32px; }
+    .payment-box .payment-label { font-size:10px; color:#7B7BC0; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; font-weight:700; }
+    .payment-box .iban { font-size:15px; font-weight:800; color:#5D5C9E; letter-spacing:2px; }
+    .payment-box .bank { font-size:12px; color:#7B7BC0; margin-top:4px; }
+
+    /* NOTES */
+    .notes-box { background:#FFFBEB; border:1px solid #FDE68A; border-radius:12px; padding:16px 20px; margin-bottom:32px; }
+    .notes-box .notes-label { font-size:10px; color:#92400E; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; font-weight:700; }
+    .notes-box p { font-size:12px; color:#78350F; line-height:1.6; }
+
+    /* FOOTER */
+    .footer { text-align:center; padding-top:24px; border-top:1px solid #F1F5F9; }
+    .footer p { font-size:11px; color:#CBD5E1; }
+    .footer .kipri { font-weight:700; color:#5D5C9E; }
+
+    @media print {
+      body { background:white; }
+      .page { box-shadow:none; padding:40px; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo-area">
+      ${config?.logo_url
+        ? `<img src="${config.logo_url}" alt="Logo"/>`
+        : `<div class="company-name">${config?.nome_azienda || 'KIPRI'}</div>`}
     </div>
-    <div class="ft">${lang === 'it' ? 'FATTURA' : 'INVOICE'}</div>
-    <div class="meta">
-      <div class="mb"><div class="ml">${lang === 'it' ? 'Numero' : 'Number'}</div><div class="mv">${fattura.numero}</div></div>
-      <div class="mb"><div class="ml">Date</div><div class="mv">${new Date(fattura.data).toLocaleDateString('en-GB')}</div></div>
+    <div class="company-info">
+      <div class="name">${config?.nome_azienda || ''}</div>
+      ${config?.settore ? `<p>${config.settore}</p>` : ''}
+      ${config?.email_business ? `<p>${config.email_business}</p>` : ''}
     </div>
-    <div class="cb"><h3>${lang === 'it' ? 'Fatturato a' : 'Billed to'}</h3>
-      <p style="font-size:13px;font-weight:700;">${cliente?.nome || ''}</p>
-      <span style="font-size:11px;color:#64748B;">${cliente?.email || ''} ${cliente?.tel ? '· ' + cliente.tel : ''}</span>
+  </div>
+
+  <!-- TITLE -->
+  <div class="title-row">
+    <div class="invoice-label">${isIT ? 'FATTURA' : 'INVOICE'}</div>
+    <div class="invoice-badge">
+      <div class="num-label">${isIT ? 'Numero' : 'Number'}</div>
+      <div class="num-value">#${fattura.numero}</div>
     </div>
-    <table><thead><tr>
-      <th>${lang === 'it' ? 'Descrizione' : 'Description'}</th>
-      <th style="text-align:center;">${lang === 'it' ? 'Qtà' : 'Qty'}</th>
-      <th style="text-align:right;">${lang === 'it' ? 'Prezzo' : 'Price'}</th>
-      <th style="text-align:right;">Totale</th>
-    </tr></thead><tbody>
-    ${servizi.map(s => `<tr><td>${s.descrizione}</td><td style="text-align:center;">${s.quantita}</td><td style="text-align:right;">${currency}${parseFloat(s.prezzo).toFixed(2)}</td><td style="text-align:right;">${currency}${((parseFloat(s.prezzo)||0)*(parseInt(s.quantita)||1)).toFixed(2)}</td></tr>`).join('')}
-    </tbody></table>
-    <div class="tot"><div class="tb">
-      <div class="tr"><span>Subtotale</span><span>${currency}${subtot.toFixed(2)}</span></div>
-      ${fattura.iva > 0 ? `<div class="tr"><span>IVA/VAT ${fattura.iva}%</span><span>${currency}${ivaImp.toFixed(2)}</span></div>` : ''}
-      <div class="tf"><span>TOTALE</span><span>${currency}${fattura.totale.toFixed(2)}</span></div>
-    </div></div>
-    ${fattura.note ? `<div style="margin-top:24px;background:#F8F9FF;border-radius:10px;padding:12px 16px;"><p style="font-size:11px;color:#94A3B8;text-transform:uppercase;margin-bottom:4px;">Note</p><p style="font-size:12px;">${fattura.note}</p></div>` : ''}
-    <div class="foot">Generated with KIPRI · your business in your pocket</div>
-    </body></html>`;
+  </div>
+
+  <!-- META -->
+  <div class="meta-row">
+    <div class="meta-box">
+      <div class="label">${isIT ? 'Data emissione' : 'Issue date'}</div>
+      <div class="value">${new Date(fattura.data).toLocaleDateString('en-GB')}</div>
+    </div>
+    <div class="meta-box">
+      <div class="label">Status</div>
+      <div class="value" style="color:#15803D;">✓ ${isIT ? 'Emessa' : 'Issued'}</div>
+    </div>
+    ${fattura.iva > 0 ? `
+    <div class="meta-box">
+      <div class="label">IVA / VAT</div>
+      <div class="value">${fattura.iva}%</div>
+    </div>` : ''}
+  </div>
+
+  <!-- PARTIES -->
+  <div class="parties">
+    <div class="party-box">
+      <div class="party-label">${isIT ? 'Da' : 'From'}</div>
+      <div class="party-name">${config?.nome_azienda || ''}</div>
+      ${config?.settore ? `<p>${config.settore}</p>` : ''}
+      ${config?.email_business ? `<p>${config.email_business}</p>` : ''}
+    </div>
+    <div class="party-box">
+      <div class="party-label">${isIT ? 'Fatturato a' : 'Billed to'}</div>
+      <div class="party-name">${cliente?.nome || ''}</div>
+      ${cliente?.email ? `<p>${cliente.email}</p>` : ''}
+      ${cliente?.tel ? `<p>${cliente.tel}</p>` : ''}
+      ${cliente?.indirizzo ? `<p>${cliente.indirizzo}</p>` : ''}
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <table>
+    <thead>
+      <tr>
+        <th style="text-align:left;">${isIT ? 'Descrizione' : 'Description'}</th>
+        <th style="text-align:center;">${isIT ? 'Qtà' : 'Qty'}</th>
+        <th style="text-align:right;">${isIT ? 'Prezzo unitario' : 'Unit price'}</th>
+        <th style="text-align:right;">Totale</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${servizi.map(s => `
+      <tr>
+        <td>${s.descrizione}</td>
+        <td style="text-align:center;">${s.quantita}</td>
+        <td style="text-align:right;">${currency}${parseFloat(s.prezzo).toFixed(2)}</td>
+        <td style="text-align:right;font-weight:700;">${currency}${((parseFloat(s.prezzo)||0)*(parseInt(s.quantita)||1)).toFixed(2)}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+
+  <!-- TOTALS -->
+  <div class="totals-wrapper">
+    <div class="totals-box">
+      <div class="total-row">
+        <span>Subtotale</span>
+        <span>${currency}${subtot.toFixed(2)}</span>
+      </div>
+      ${fattura.iva > 0 ? `
+      <div class="total-row">
+        <span>IVA/VAT ${fattura.iva}%</span>
+        <span>${currency}${ivaImp.toFixed(2)}</span>
+      </div>` : ''}
+      <div class="total-final">
+        <span>TOTALE</span>
+        <span>${currency}${fattura.totale.toFixed(2)}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAYMENT INFO -->
+  ${config?.iban ? `
+  <div class="payment-box">
+    <div class="payment-label">${isIT ? 'Coordinate bancarie' : 'Payment details'}</div>
+    <div class="iban">${config.iban}</div>
+    ${config?.nome_banca ? `<div class="bank">${config.nome_banca}</div>` : ''}
+  </div>` : ''}
+
+  <!-- NOTES -->
+  ${fattura.note ? `
+  <div class="notes-box">
+    <div class="notes-label">Note</div>
+    <p>${fattura.note}</p>
+  </div>` : ''}
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <p>Generated with <span class="kipri">KIPRI</span> · your business in your pocket</p>
+  </div>
+
+</div>
+</body>
+</html>`;
+  };
+
+  const scaricaPDF = (fattura) => {
+    const html = generaHTML(fattura);
+    const win = window.open('', '_blank');
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => { win.print(); };
+  };
+
+  const inviaEmail = (fattura) => {
+    const cliente = clienti.find(c => c.id === fattura.cliente_id);
+    if (!cliente?.email) {
+      alert(lang === 'it' ? 'Questo cliente non ha un\'email.' : 'This client has no email.');
+      return;
+    }
+    const html = generaHTML(fattura);
     const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `${lang === 'it' ? 'fattura' : 'invoice'}-${fattura.numero}.html`; a.click();
+    const subject = encodeURIComponent(`${lang === 'it' ? 'Fattura' : 'Invoice'} #${fattura.numero} - ${config?.nome_azienda || 'KIPRI'}`);
+    const body = encodeURIComponent(
+      lang === 'it'
+        ? `Ciao ${cliente.nome},\n\nIn allegato trovi la fattura #${fattura.numero} di ${currency}${parseFloat(fattura.totale).toFixed(2)}.\n\nGrazie,\n${config?.nome_azienda || ''}`
+        : `Hi ${cliente.nome},\n\nPlease find attached invoice #${fattura.numero} for ${currency}${parseFloat(fattura.totale).toFixed(2)}.\n\nThank you,\n${config?.nome_azienda || ''}`
+    );
+    window.location.href = `mailto:${cliente.email}?subject=${subject}&body=${body}`;
     URL.revokeObjectURL(url);
   };
 
@@ -134,8 +314,9 @@ export default function Fatture({ supabase, user, clienti, config }) {
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
                     <span style={{ fontSize: '18px', fontWeight: '800', color: '#5D5C9E' }}>{currency}{parseFloat(f.totale).toFixed(2)}</span>
                     <div style={{ display: 'flex', gap: '6px' }}>
-                      <button onClick={() => scaricaPDF(f)} style={iconBtn('#EEF8F2', '#15803D')}><Download size={14} /></button>
-                      <button onClick={() => elimina(f.id)} style={iconBtn('#FEF2F2', '#EF4444')}><Trash2 size={14} /></button>
+                      <button onClick={() => scaricaPDF(f)} title={lang === 'it' ? 'Scarica PDF' : 'Download PDF'} style={iconBtn('#EEF8F2', '#15803D')}><Download size={14} /></button>
+                      <button onClick={() => inviaEmail(f)} title={lang === 'it' ? 'Invia per email' : 'Send by email'} style={iconBtn('#EFF6FF', '#3B82F6')}><Mail size={14} /></button>
+                      <button onClick={() => elimina(f.id)} title={lang === 'it' ? 'Elimina' : 'Delete'} style={iconBtn('#FEF2F2', '#EF4444')}><Trash2 size={14} /></button>
                     </div>
                   </div>
                 </div>
