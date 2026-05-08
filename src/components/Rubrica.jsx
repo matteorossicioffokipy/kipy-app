@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Phone, Mail, Pencil, MessageCircle, UserPlus, Trash2 } from 'lucide-react';
+import { Plus, Phone, Mail, Pencil, MessageCircle, UserPlus, Trash2, BookUser } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 
 export default function Rubrica({
@@ -7,6 +7,29 @@ export default function Rubrica({
   setFormCliente, setMostraModuloCliente, onEliminaCliente
 }) {
   const { t } = useLang();
+
+  const importaDaContatti = async () => {
+    if (!('contacts' in navigator && 'ContactsManager' in window)) {
+      alert('Il tuo browser non supporta l\'importazione contatti. Usa Chrome su Android o Safari su iOS.');
+      return;
+    }
+    try {
+      const contatti = await navigator.contacts.select(['name', 'tel', 'email'], { multiple: false });
+      if (contatti && contatti.length > 0) {
+        const c = contatti[0];
+        setClienteInModifica(null);
+        setFormCliente({
+          nome: c.name?.[0] || '',
+          tel: c.tel?.[0] || '',
+          email: c.email?.[0] || '',
+          note: '',
+        });
+        setMostraModuloCliente(true);
+      }
+    } catch (err) {
+      console.error('Importazione annullata', err);
+    }
+  };
 
   return (
     <div style={{ width: '100%', boxSizing: 'border-box' }}>
@@ -20,17 +43,26 @@ export default function Rubrica({
             {clienti.length} {clienti.length === 1 ? t('rubrica_contact') : t('rubrica_contacts')}
           </p>
         </div>
-        <button
-          onClick={() => {
-            setClienteInModifica(null);
-            setFormCliente({ nome: '', tel: '', email: '', note: '' });
-            setMostraModuloCliente(true);
-          }}
-          style={addBtnStyle}
-          title={t('rubrica_addClient')}
-        >
-          <UserPlus size={18} />
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={importaDaContatti}
+            style={{ ...addBtnStyle, background: '#F0F0FA', color: '#5D5C9E' }}
+            title="Importa da contatti"
+          >
+            <BookUser size={18} />
+          </button>
+          <button
+            onClick={() => {
+              setClienteInModifica(null);
+              setFormCliente({ nome: '', tel: '', email: '', note: '' });
+              setMostraModuloCliente(true);
+            }}
+            style={addBtnStyle}
+            title={t('rubrica_addClient')}
+          >
+            <UserPlus size={18} />
+          </button>
+        </div>
       </div>
 
       {clienti.length === 0 ? (
