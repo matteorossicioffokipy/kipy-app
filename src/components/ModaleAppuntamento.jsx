@@ -2,6 +2,19 @@ import React, { useState } from 'react';
 import { useLang } from '../LanguageContext';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
+const COLORI_PRESET = [
+  '#FFB347',
+  '#5D5C9E',
+  '#70C18E',
+  '#EF4444',
+  '#3B82F6',
+  '#F59E0B',
+  '#EC4899',
+  '#06B6D4',
+  '#8B5CF6',
+  '#64748B',
+];
+
 export default function ModaleAppuntamento({ formApp, setFormApp, onSalva, onAnnulla, isEdit }) {
   const { t, lang } = useLang();
   const [mostraNoteDettagliate, setMostraNoteDettagliate] = useState(!!(formApp.note_dettagliate));
@@ -9,34 +22,12 @@ export default function ModaleAppuntamento({ formApp, setFormApp, onSalva, onAnn
   return (
     <div
       onClick={(e) => { if (e.target === e.currentTarget) onAnnulla(); }}
-      style={{
-        position: 'fixed',
-        top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.45)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        padding: '24px',
-        boxSizing: 'border-box',
-      }}
+      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px', boxSizing: 'border-box' }}
     >
-      <div style={{
-        background: 'white',
-        borderRadius: '24px',
-        padding: '24px',
-        width: '100%',
-        maxWidth: '380px',
-        boxSizing: 'border-box',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
-        maxHeight: '90vh',
-        overflowY: 'auto',
-      }}>
+      <div style={{ background: 'white', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '380px', boxSizing: 'border-box', boxShadow: '0 20px 60px rgba(0,0,0,0.18)', maxHeight: '90vh', overflowY: 'auto' }}>
 
         <h3 style={{ margin: '0 0 20px', fontFamily: "'Baloo 2', sans-serif", fontSize: '18px', fontWeight: '800', color: '#1E293B' }}>
-          {isEdit
-            ? (lang === 'it' ? '✏️ Modifica appuntamento' : '✏️ Edit appointment')
-            : t('appt_title')}
+          {isEdit ? (lang === 'it' ? '✏️ Modifica appuntamento' : '✏️ Edit appointment') : t('appt_title')}
         </h3>
 
         {/* TITOLO */}
@@ -46,25 +37,50 @@ export default function ModaleAppuntamento({ formApp, setFormApp, onSalva, onAnn
             onChange={e => setFormApp({ ...formApp, titolo: e.target.value })} />
         </div>
 
+        {/* CATEGORIA + COLORE */}
+        <div style={{ marginBottom: '14px' }}>
+          <label style={lbl}>{lang === 'it' ? 'Categoria e colore' : 'Category & colour'}</label>
+          <input
+            style={{ ...inp, marginBottom: '10px' }}
+            placeholder={lang === 'it' ? 'Es: Shooting, Meeting, Consegna...' : 'E.g: Shooting, Meeting, Delivery...'}
+            value={formApp.categoria || ''}
+            onChange={e => setFormApp({ ...formApp, categoria: e.target.value })}
+          />
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {COLORI_PRESET.map(colore => (
+              <div
+                key={colore}
+                onClick={() => setFormApp({ ...formApp, colore })}
+                style={{
+                  width: '28px', height: '28px', borderRadius: '8px', background: colore, cursor: 'pointer',
+                  border: (formApp.colore || '#FFB347') === colore ? '3px solid #1E293B' : '3px solid transparent',
+                  boxSizing: 'border-box', transition: 'transform 0.1s',
+                  transform: (formApp.colore || '#FFB347') === colore ? 'scale(1.15)' : 'scale(1)',
+                }}
+              />
+            ))}
+            <input
+              type="color"
+              value={formApp.colore || '#FFB347'}
+              onChange={e => setFormApp({ ...formApp, colore: e.target.value })}
+              style={{ width: '28px', height: '28px', borderRadius: '8px', border: '2px dashed #CBD5E1', cursor: 'pointer', padding: '2px', background: 'white' }}
+              title={lang === 'it' ? 'Colore personalizzato' : 'Custom colour'}
+            />
+          </div>
+        </div>
+
         {/* DATA INIZIO - FINE */}
         <div style={{ marginBottom: '14px' }}>
           <label style={lbl}>{lang === 'it' ? 'Periodo' : 'Period'}</label>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: '700', marginBottom: '4px', fontFamily: "'Baloo 2', sans-serif" }}>
-                {lang === 'it' ? 'Dal' : 'From'}
-              </div>
-              <input style={inp} type="date" value={formApp.data}
-                onChange={e => setFormApp({ ...formApp, data: e.target.value })} />
+              <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: '700', marginBottom: '4px', fontFamily: "'Baloo 2', sans-serif" }}>{lang === 'it' ? 'Dal' : 'From'}</div>
+              <input style={inp} type="date" value={formApp.data} onChange={e => setFormApp({ ...formApp, data: e.target.value })} />
             </div>
             <div style={{ color: '#CBD5E1', fontSize: '18px', marginTop: '18px' }}>→</div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: '700', marginBottom: '4px', fontFamily: "'Baloo 2', sans-serif" }}>
-                {lang === 'it' ? 'Al' : 'To'}
-              </div>
-              <input style={inp} type="date" value={formApp.data_fine || formApp.data}
-                min={formApp.data}
-                onChange={e => setFormApp({ ...formApp, data_fine: e.target.value })} />
+              <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: '700', marginBottom: '4px', fontFamily: "'Baloo 2', sans-serif" }}>{lang === 'it' ? 'Al' : 'To'}</div>
+              <input style={inp} type="date" value={formApp.data_fine || formApp.data} min={formApp.data} onChange={e => setFormApp({ ...formApp, data_fine: e.target.value })} />
             </div>
           </div>
         </div>
@@ -74,19 +90,13 @@ export default function ModaleAppuntamento({ formApp, setFormApp, onSalva, onAnn
           <label style={lbl}>{lang === 'it' ? 'Orario' : 'Time'}</label>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: '700', marginBottom: '4px', fontFamily: "'Baloo 2', sans-serif" }}>
-                {lang === 'it' ? 'Dalle' : 'From'}
-              </div>
-              <input style={inp} type="time" value={formApp.ora}
-                onChange={e => setFormApp({ ...formApp, ora: e.target.value })} />
+              <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: '700', marginBottom: '4px', fontFamily: "'Baloo 2', sans-serif" }}>{lang === 'it' ? 'Dalle' : 'From'}</div>
+              <input style={inp} type="time" value={formApp.ora} onChange={e => setFormApp({ ...formApp, ora: e.target.value })} />
             </div>
             <div style={{ color: '#CBD5E1', fontSize: '18px', marginTop: '18px' }}>→</div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: '700', marginBottom: '4px', fontFamily: "'Baloo 2', sans-serif" }}>
-                {lang === 'it' ? 'Alle' : 'To'}
-              </div>
-              <input style={inp} type="time" value={formApp.ora_fine || ''}
-                onChange={e => setFormApp({ ...formApp, ora_fine: e.target.value })} />
+              <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: '700', marginBottom: '4px', fontFamily: "'Baloo 2', sans-serif" }}>{lang === 'it' ? 'Alle' : 'To'}</div>
+              <input style={inp} type="time" value={formApp.ora_fine || ''} onChange={e => setFormApp({ ...formApp, ora_fine: e.target.value })} />
             </div>
           </div>
         </div>
@@ -95,45 +105,28 @@ export default function ModaleAppuntamento({ formApp, setFormApp, onSalva, onAnn
         <div style={{ marginBottom: '14px' }}>
           <label style={lbl}>Note</label>
           <input style={inp} placeholder={lang === 'it' ? 'Note brevi...' : 'Quick notes...'}
-            value={formApp.note || ''}
-            onChange={e => setFormApp({ ...formApp, note: e.target.value })} />
+            value={formApp.note || ''} onChange={e => setFormApp({ ...formApp, note: e.target.value })} />
         </div>
 
         {/* NOTE DETTAGLIATE */}
         <div style={{ marginBottom: '20px' }}>
           <button
             onClick={() => setMostraNoteDettagliate(!mostraNoteDettagliate)}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              background: '#F8FAFC', border: '1.5px solid #E2E8F0', borderRadius: '12px',
-              padding: '11px 14px', cursor: 'pointer', fontFamily: "'Baloo 2', sans-serif",
-              fontSize: '13px', fontWeight: '700', color: '#5D5C9E',
-            }}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F8FAFC', border: '1.5px solid #E2E8F0', borderRadius: '12px', padding: '11px 14px', cursor: 'pointer', fontFamily: "'Baloo 2', sans-serif", fontSize: '13px', fontWeight: '700', color: '#5D5C9E' }}
           >
             <span>📝 {lang === 'it' ? 'Note dettagliate' : 'Detailed notes'}</span>
             {mostraNoteDettagliate ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
-
           {mostraNoteDettagliate && (
             <div style={{ marginTop: '8px' }}>
               <textarea
-                style={{
-                  ...inp,
-                  minHeight: '140px',
-                  resize: 'vertical',
-                  lineHeight: '1.6',
-                  fontSize: '14px',
-                }}
-                placeholder={lang === 'it'
-                  ? 'Es: Shot list, attrezzatura necessaria, dettagli cliente, riferimenti creativi...'
-                  : 'E.g: Shot list, required equipment, client details, creative references...'}
+                style={{ ...inp, minHeight: '140px', resize: 'vertical', lineHeight: '1.6', fontSize: '14px' }}
+                placeholder={lang === 'it' ? 'Es: Shot list, attrezzatura necessaria, dettagli cliente, riferimenti creativi...' : 'E.g: Shot list, required equipment, client details, creative references...'}
                 value={formApp.note_dettagliate || ''}
                 onChange={e => setFormApp({ ...formApp, note_dettagliate: e.target.value })}
               />
               <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px', fontFamily: "'Baloo 2', sans-serif" }}>
-                {lang === 'it'
-                  ? 'Spazio libero per appunti, checklist e tutto ciò che ti serve per questo appuntamento.'
-                  : 'Free space for notes, checklists and everything you need for this appointment.'}
+                {lang === 'it' ? 'Spazio libero per appunti, checklist e tutto ciò che ti serve per questo appuntamento.' : 'Free space for notes, checklists and everything you need for this appointment.'}
               </p>
             </div>
           )}

@@ -17,6 +17,8 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
   const lightOrange = '#FFF7ED';
   const proMemoriaAttivo = config?.promemoria_attivo ?? true;
 
+  const getColore = (app) => app.colore || orangeKipy;
+
   const formattaLocale = (date) => {
     if (!date) return '';
     const y = date.getFullYear();
@@ -55,15 +57,12 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
   const isOggi = (date) => date && formattaLocale(date) === oggiCorretto;
   const isSelezionato = (date) => date && formattaLocale(date) === dataSelezionata;
 
-  // Supporto multi-giorno: un appuntamento appare su tutti i giorni del suo periodo
-  const haAppuntamenti = (date) => {
-    if (!date) return false;
+  const coloriGiorno = (date) => {
+    if (!date) return [];
     const dateStr = formattaLocale(date);
-    return (appuntamenti || []).some(a => {
-      const start = a.data;
-      const end = a.data_fine || a.data;
-      return dateStr >= start && dateStr <= end;
-    });
+    return (appuntamenti || [])
+      .filter(a => dateStr >= a.data && dateStr <= (a.data_fine || a.data))
+      .map(a => a.colore || orangeKipy);
   };
 
   const appuntamentiGiorno = (appuntamenti || [])
@@ -90,6 +89,8 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
       ora_fine: app.ora_fine || '',
       note: app.note || '',
       note_dettagliate: app.note_dettagliate || '',
+      colore: app.colore || orangeKipy,
+      categoria: app.categoria || '',
     });
     setAppModifica(app);
   };
@@ -103,6 +104,8 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
       ora_fine: formModifica.ora_fine || null,
       note: formModifica.note || null,
       note_dettagliate: formModifica.note_dettagliate || null,
+      colore: formModifica.colore || orangeKipy,
+      categoria: formModifica.categoria || null,
     }).eq('id', appModifica.id);
     if (!error) { setAppModifica(null); fetchDati(); }
     else alert('Errore: ' + error.message);
@@ -167,15 +170,22 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
           {['L', 'M', 'M', 'G', 'V', 'S', 'D'].map((d, i) => (
             <div key={i} style={{ fontSize: '10px', fontWeight: '800', color: '#CBD5E1', marginBottom: '8px' }}>{d}</div>
           ))}
-          {(vistaSettimanale ? getGiorniSettimana() : getGiorniMese()).map((giorno, i) => (
-            <div key={i} onClick={() => giorno && setDataSelezionata(formattaLocale(giorno))}
-              style={{ height: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', borderRadius: '12px', position: 'relative', background: isSelezionato(giorno) ? orangeKipy : 'transparent', color: isSelezionato(giorno) ? 'white' : (isOggi(giorno) ? orangeKipy : '#1E293B'), fontWeight: (isSelezionato(giorno) || isOggi(giorno)) ? '800' : '500', opacity: giorno ? 1 : 0, touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>
-              <span style={{ fontSize: '13px' }}>{giorno && giorno.getDate()}</span>
-              {haAppuntamenti(giorno) && (
-                <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: isSelezionato(giorno) ? 'white' : orangeKipy, position: 'absolute', bottom: '4px' }}></div>
-              )}
-            </div>
-          ))}
+          {(vistaSettimanale ? getGiorniSettimana() : getGiorniMese()).map((giorno, i) => {
+            const colori = coloriGiorno(giorno);
+            return (
+              <div key={i} onClick={() => giorno && setDataSelezionata(formattaLocale(giorno))}
+                style={{ height: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', borderRadius: '12px', position: 'relative', background: isSelezionato(giorno) ? orangeKipy : 'transparent', color: isSelezionato(giorno) ? 'white' : (isOggi(giorno) ? orangeKipy : '#1E293B'), fontWeight: (isSelezionato(giorno) || isOggi(giorno)) ? '800' : '500', opacity: giorno ? 1 : 0, touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>
+                <span style={{ fontSize: '13px' }}>{giorno && giorno.getDate()}</span>
+                {colori.length > 0 && (
+                  <div style={{ display: 'flex', gap: '2px', position: 'absolute', bottom: '4px' }}>
+                    {colori.slice(0, 3).map((c, idx) => (
+                      <div key={idx} style={{ width: '4px', height: '4px', borderRadius: '50%', background: isSelezionato(giorno) ? 'white' : c }} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -191,86 +201,74 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
 
       {/* APPUNTAMENTI */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {appuntamentiGiorno.length > 0 ? appuntamentiGiorno.map(app => (
-          <div key={app.id}>
-            <div style={{ background: 'white', padding: '15px', borderRadius: '22px', boxShadow: '0 5px 15px rgba(0,0,0,0.02)', borderLeft: `4px solid ${orangeKipy}` }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ flex: 1 }}>
-                  {/* ORARIO */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '2px' }}>
-                    <Clock size={12} color={orangeKipy} />
-                    <span style={{ fontSize: '12px', fontWeight: '800', color: orangeKipy }}>
-                      {app.ora.slice(0, 5)}
-                      {app.ora_fine ? ` → ${app.ora_fine.slice(0, 5)}` : ''}
-                    </span>
-                    {isMultiGiorno(app) && (
-                      <span style={{ fontSize: '10px', background: '#FFF7ED', color: orangeKipy, padding: '1px 8px', borderRadius: '20px', fontWeight: '700' }}>
-                        {lang === 'it' ? 'Multi-giorno' : 'Multi-day'}
+        {appuntamentiGiorno.length > 0 ? appuntamentiGiorno.map(app => {
+          const colore = getColore(app);
+          return (
+            <div key={app.id}>
+              <div style={{ background: 'white', padding: '15px', borderRadius: '22px', boxShadow: '0 5px 15px rgba(0,0,0,0.02)', borderLeft: `4px solid ${colore}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '2px', flexWrap: 'wrap' }}>
+                      <Clock size={12} color={colore} />
+                      <span style={{ fontSize: '12px', fontWeight: '800', color: colore }}>
+                        {app.ora.slice(0, 5)}{app.ora_fine ? ` → ${app.ora_fine.slice(0, 5)}` : ''}
                       </span>
-                    )}
-                  </div>
-
-                  {/* TITOLO */}
-                  <div style={{ fontWeight: '800', fontSize: '14px', color: '#1E293B' }}>{app.titolo}</div>
-
-                  {/* PERIODO */}
-                  {isMultiGiorno(app) && (
-                    <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
-                      {new Date(app.data + 'T00:00:00').toLocaleDateString(lang === 'it' ? 'it-IT' : 'en-GB', { day: 'numeric', month: 'short' })}
-                      {' → '}
-                      {new Date(app.data_fine + 'T00:00:00').toLocaleDateString(lang === 'it' ? 'it-IT' : 'en-GB', { day: 'numeric', month: 'short' })}
+                      {app.categoria && (
+                        <span style={{ fontSize: '10px', background: colore + '22', color: colore, padding: '1px 8px', borderRadius: '20px', fontWeight: '700' }}>
+                          {app.categoria}
+                        </span>
+                      )}
+                      {isMultiGiorno(app) && (
+                        <span style={{ fontSize: '10px', background: colore + '22', color: colore, padding: '1px 8px', borderRadius: '20px', fontWeight: '700' }}>
+                          {lang === 'it' ? 'Multi-giorno' : 'Multi-day'}
+                        </span>
+                      )}
                     </div>
-                  )}
+                    <div style={{ fontWeight: '800', fontSize: '14px', color: '#1E293B' }}>{app.titolo}</div>
+                    {isMultiGiorno(app) && (
+                      <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
+                        {new Date(app.data + 'T00:00:00').toLocaleDateString(lang === 'it' ? 'it-IT' : 'en-GB', { day: 'numeric', month: 'short' })}
+                        {' → '}
+                        {new Date(app.data_fine + 'T00:00:00').toLocaleDateString(lang === 'it' ? 'it-IT' : 'en-GB', { day: 'numeric', month: 'short' })}
+                      </div>
+                    )}
+                    {app.note && <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px', fontStyle: 'italic' }}>{app.note}</div>}
+                  </div>
 
-                  {/* NOTE BREVI */}
-                  {app.note && <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px', fontStyle: 'italic' }}>{app.note}</div>}
+                  <div style={{ display: 'flex', gap: '6px', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    {app.note_dettagliate && (
+                      <button onClick={() => setNoteAperte(noteAperte === app.id ? null : app.id)} style={{ background: '#F0F0FA', border: 'none', color: '#5D5C9E', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}>
+                        <FileText size={16} />
+                      </button>
+                    )}
+                    {proMemoriaAttivo && (
+                      <button onClick={() => inviaPromemoria(app)} style={{ background: '#DCFCE7', border: 'none', color: '#15803D', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}>
+                        <MessageCircle size={16} />
+                      </button>
+                    )}
+                    <button onClick={() => apriModifica(app)} style={{ background: '#EFF6FF', border: 'none', color: '#3B82F6', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}>
+                      <Pencil size={16} />
+                    </button>
+                    <button onClick={() => eliminaAppuntamento(app.id)} style={{ background: '#FEF2F2', border: 'none', color: '#EF4444', padding: '8px', borderRadius: '10px', cursor: 'pointer', touchAction: 'manipulation' }}>
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
 
-                {/* BOTTONI */}
-                <div style={{ display: 'flex', gap: '6px', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                  {app.note_dettagliate && (
-                    <button
-                      onClick={() => setNoteAperte(noteAperte === app.id ? null : app.id)}
-                      style={{ background: '#F0F0FA', border: 'none', color: '#5D5C9E', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}
-                      title={lang === 'it' ? 'Note dettagliate' : 'Detailed notes'}
-                    >
-                      <FileText size={16} />
-                    </button>
-                  )}
-                  {proMemoriaAttivo && (
-                    <button onClick={() => inviaPromemoria(app)} style={{ background: '#DCFCE7', border: 'none', color: '#15803D', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}>
-                      <MessageCircle size={16} />
-                    </button>
-                  )}
-                  <button onClick={() => apriModifica(app)} style={{ background: '#EFF6FF', border: 'none', color: '#3B82F6', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}>
-                    <Pencil size={16} />
-                  </button>
-                  <button onClick={() => eliminaAppuntamento(app.id)} style={{ background: '#FEF2F2', border: 'none', color: '#EF4444', padding: '8px', borderRadius: '10px', cursor: 'pointer', touchAction: 'manipulation' }}>
-                    <Trash2 size={16} />
-                  </button>
-                </div>
+                {noteAperte === app.id && app.note_dettagliate && (
+                  <div style={{ marginTop: '12px', background: '#F8FAFC', borderRadius: '12px', padding: '14px', borderLeft: `3px solid ${colore}` }}>
+                    <div style={{ fontSize: '10px', fontWeight: '800', color: colore, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                      📝 {lang === 'it' ? 'Note dettagliate' : 'Detailed notes'}
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#1E293B', lineHeight: '1.7', whiteSpace: 'pre-wrap', fontFamily: "'Baloo 2', sans-serif" }}>
+                      {app.note_dettagliate}
+                    </div>
+                  </div>
+                )}
               </div>
-
-              {/* NOTE DETTAGLIATE ESPANDIBILI */}
-              {noteAperte === app.id && app.note_dettagliate && (
-                <div style={{
-                  marginTop: '12px',
-                  background: '#F8FAFC',
-                  borderRadius: '12px',
-                  padding: '14px',
-                  borderLeft: '3px solid #5D5C9E',
-                }}>
-                  <div style={{ fontSize: '10px', fontWeight: '800', color: '#5D5C9E', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
-                    📝 {lang === 'it' ? 'Note dettagliate' : 'Detailed notes'}
-                  </div>
-                  <div style={{ fontSize: '13px', color: '#1E293B', lineHeight: '1.7', whiteSpace: 'pre-wrap', fontFamily: "'Baloo 2', sans-serif" }}>
-                    {app.note_dettagliate}
-                  </div>
-                </div>
-              )}
             </div>
-          </div>
-        )) : (
+          );
+        }) : (
           <div style={{ textAlign: 'center', padding: '30px', color: '#CBD5E1', background: 'white', borderRadius: '22px', border: '2px dashed #F1F5F9', fontSize: '13px' }}>
             {t('calendario_noAppointments')}
           </div>
@@ -282,7 +280,6 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
         <Plus size={28} />
       </button>
 
-      {/* MODALE MODIFICA */}
       {appModifica && (
         <ModaleAppuntamento
           formApp={formModifica}
