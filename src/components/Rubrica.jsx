@@ -10,7 +10,7 @@ export default function Rubrica({
 
   const importaDaContatti = async () => {
     if (!('contacts' in navigator && 'ContactsManager' in window)) {
-      alert('Il tuo browser non supporta l\'importazione contatti. Usa Chrome su Android o Safari su iOS.');
+      alert('L\'importazione contatti è disponibile solo su Android con Chrome. Su iPhone inserisci il contatto manualmente.');
       return;
     }
     try {
