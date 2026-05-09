@@ -176,7 +176,7 @@ export default function App() {
               {config.logo_url ? (
                 <img src={config.logo_url} alt="Logo" style={{ height: '44px', width: '44px', borderRadius: '12px', objectFit: 'contain', background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.25)', padding: '5px', flexShrink: 0 }} />
               ) : (
-                <div style={{ height: '44px', width: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>🏢</div>
+                <div style={{ height: '44px', width: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
               )}
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: '800', fontSize: '18px', color: 'white', lineHeight: 1.2, fontFamily: "'Baloo 2', sans-serif" }}>
