@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle, Circle, Trash2, Plus, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
+import { CheckCircle, Circle, Trash2, Plus, ChevronLeft, ChevronRight, Clock, Calendar } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 
 export default function TodoList({ supabase, user }) {
@@ -28,7 +28,7 @@ export default function TodoList({ supabase, user }) {
       .eq('user_id', user.id)
       .eq('data', dataSelezionata);
     const appuntamentiComeTodo = (appuntamentiData || []).map(app => ({
-      id: app.id, testo: `📞 ${app.titolo}`, orario: app.ora,
+      id: app.id, testo: app.titolo, orario: app.ora,
       completato: app.completato || false, isAppuntamento: true
     }));
     const listaCompleta = [...appuntamentiComeTodo, ...(todosData || [])].sort((a, b) =>
@@ -115,9 +115,12 @@ export default function TodoList({ supabase, user }) {
                 {todo.completato ? <CheckCircle color="#88C999" size={26} /> : <Circle color="#CBD5E1" size={26} />}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ textDecoration: todo.completato ? 'line-through' : 'none', color: todo.completato ? '#94A3B8' : '#1E293B', fontWeight: '800', fontSize: '16px' }}>
-                  {todo.testo}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {todo.isAppuntamento && <Calendar size={14} color="#88C999" />}
+                  <span style={{ textDecoration: todo.completato ? 'line-through' : 'none', color: todo.completato ? '#94A3B8' : '#1E293B', fontWeight: '800', fontSize: '16px' }}>
+                    {todo.testo}
+                  </span>
+                </div>
                 {todo.orario && (
                   <span style={{ fontSize: '13px', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
                     <Clock size={14} /> {todo.orario.substring(0, 5)}
