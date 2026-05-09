@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Clock, Trash2, Plus, Calendar as CalIcon, MessageCircle, Pencil, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Trash2, Plus, Calendar as CalIcon, MessageCircle, Pencil, FileText, Users } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 import ModaleAppuntamento from './ModaleAppuntamento';
 
@@ -12,6 +12,7 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
   const [appModifica, setAppModifica] = useState(null);
   const [formModifica, setFormModifica] = useState({});
   const [noteAperte, setNoteAperte] = useState(null);
+  const [pickerClienti, setPickerClienti] = useState(null); // lista clienti per il picker
 
   const orangeKipy = '#FFB347';
   const lightOrange = '#FFF7ED';
@@ -133,6 +134,81 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
     }
   };
 
+  // ── REMINDER SETTIMANALE ──
+  const inviaReminderSettimanale = () => {
+    const giorni = getGiorniSettimana();
+    const inizioSett = formattaLocale(giorni[0]);
+    const fineSett = formattaLocale(giorni[6]);
+
+    // Filtra appuntamenti della settimana
+    const appSettimana = (appuntamenti || []).filter(a => {
+      const start = a.data;
+      const end = a.data_fine || a.data;
+      return start <= fineSett && end >= inizioSett;
+    });
+
+    if (appSettimana.length === 0) {
+      alert(lang === 'it' ? 'Nessun appuntamento questa settimana.' : 'No appointments this week.');
+      return;
+    }
+
+    // Raggruppa per cliente (matching nome nel titolo)
+    const gruppi = {};
+    appSettimana.forEach(app => {
+      const cliente = (clienti || []).find(c =>
+        app.titolo?.toLowerCase().includes(c.nome?.toLowerCase())
+      );
+      const nomeCliente = cliente?.nome || (lang === 'it' ? 'Senza cliente' : 'No client');
+      const tel = cliente?.tel?.replace(/\D/g, '') || '';
+      if (!gruppi[nomeCliente]) gruppi[nomeCliente] = { apps: [], tel, cliente };
+      gruppi[nomeCliente].apps.push(app);
+    });
+
+    // Solo clienti con 2+ appuntamenti
+    const clientiMultipli = Object.entries(gruppi).filter(([, v]) => v.apps.length >= 2);
+
+    if (clientiMultipli.length === 0) {
+      alert(lang === 'it'
+        ? 'Nessun cliente ha più di un appuntamento questa settimana.'
+        : 'No client has more than one appointment this week.');
+      return;
+    }
+
+    if (clientiMultipli.length === 1) {
+      // Manda direttamente
+      mandaReminderCliente(clientiMultipli[0][0], clientiMultipli[0][1]);
+    } else {
+      // Mostra picker
+      setPickerClienti(clientiMultipli);
+    }
+  };
+
+  const mandaReminderCliente = (nomeCliente, { apps, tel }) => {
+    setPickerClienti(null);
+    const appOrdinati = [...apps].sort((a, b) => {
+      if (a.data !== b.data) return a.data.localeCompare(b.data);
+      return a.ora.localeCompare(b.ora);
+    });
+
+    const locale = lang === 'it' ? 'it-IT' : 'en-GB';
+    const listaApp = appOrdinati.map(app => {
+      const dataObj = new Date(app.data + 'T00:00:00');
+      const dataFmt = dataObj.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' });
+      return `📅 ${dataFmt} — ${lang === 'it' ? 'ore' : 'at'} ${app.ora.slice(0, 5)}${app.ora_fine ? ` → ${app.ora_fine.slice(0, 5)}` : ''}${app.categoria ? ` (${app.categoria})` : ''}`;
+    }).join('\n');
+
+    const testo = lang === 'it'
+      ? `Ciao ${nomeCliente}! 👋\nEcco i tuoi appuntamenti questa settimana:\n\n${listaApp}\n\nA presto!\n— ${config?.nome_azienda || 'KIPRI'}`
+      : `Hi ${nomeCliente}! 👋\nHere are your appointments this week:\n\n${listaApp}\n\nSee you soon!\n— ${config?.nome_azienda || 'KIPRI'}`;
+
+    const encoded = encodeURIComponent(testo);
+    if (tel) {
+      window.open(`https://wa.me/${tel}?text=${encoded}`, '_blank');
+    } else {
+      window.open(`https://wa.me/?text=${encoded}`, '_blank');
+    }
+  };
+
   const isMultiGiorno = (app) => app.data_fine && app.data_fine !== app.data;
 
   return (
@@ -188,6 +264,23 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
           })}
         </div>
       </div>
+
+      {/* REMINDER SETTIMANALE — solo in vista settimana */}
+      {vistaSettimanale && proMemoriaAttivo && (
+        <button
+          onClick={inviaReminderSettimanale}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            background: '#DCFCE7', border: 'none', color: '#15803D',
+            padding: '12px', borderRadius: '16px', cursor: 'pointer',
+            fontFamily: "'Baloo 2', sans-serif", fontSize: '13px', fontWeight: '800',
+            marginBottom: '16px', touchAction: 'manipulation',
+          }}
+        >
+          <Users size={16} />
+          {lang === 'it' ? 'Invia reminder settimana' : 'Send weekly reminder'}
+        </button>
+      )}
 
       {/* DATA SELEZIONATA */}
       <div style={{ paddingLeft: '5px', marginBottom: '12px' }}>
@@ -280,6 +373,7 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
         <Plus size={28} />
       </button>
 
+      {/* MODALE MODIFICA */}
       {appModifica && (
         <ModaleAppuntamento
           formApp={formModifica}
@@ -289,6 +383,51 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
           isEdit={true}
         />
       )}
+
+      {/* PICKER CLIENTE per reminder settimanale */}
+      {pickerClienti && (
+        <div
+          onClick={() => setPickerClienti(null)}
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px', boxSizing: 'border-box' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: 'white', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '360px', boxSizing: 'border-box', boxShadow: '0 20px 60px rgba(0,0,0,0.18)' }}
+          >
+            <h3 style={{ margin: '0 0 6px', fontFamily: "'Baloo 2', sans-serif", fontSize: '18px', fontWeight: '800', color: '#1E293B' }}>
+              {lang === 'it' ? 'Scegli il cliente' : 'Choose client'}
+            </h3>
+            <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#94A3B8', fontFamily: "'Baloo 2', sans-serif" }}>
+              {lang === 'it' ? 'Più clienti hanno appuntamenti multipli questa settimana.' : 'Multiple clients have appointments this week.'}
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {pickerClienti.map(([nome, dati]) => (
+                <button
+                  key={nome}
+                  onClick={() => mandaReminderCliente(nome, dati)}
+                  style={{
+                    background: '#F8FAFC', border: '1.5px solid #E2E8F0', borderRadius: '14px',
+                    padding: '12px 16px', cursor: 'pointer', textAlign: 'left',
+                    fontFamily: "'Baloo 2', sans-serif",
+                  }}
+                >
+                  <div style={{ fontWeight: '800', fontSize: '14px', color: '#1E293B' }}>{nome}</div>
+                  <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '2px' }}>
+                    {dati.apps.length} {lang === 'it' ? 'appuntamenti' : 'appointments'}
+                  </div>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setPickerClienti(null)}
+              style={{ width: '100%', marginTop: '14px', background: '#F1F5F9', border: 'none', borderRadius: '12px', padding: '12px', cursor: 'pointer', fontFamily: "'Baloo 2', sans-serif", fontWeight: '700', color: '#64748B', fontSize: '14px' }}
+            >
+              {lang === 'it' ? 'Annulla' : 'Cancel'}
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
