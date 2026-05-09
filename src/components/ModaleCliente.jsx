@@ -1,9 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLang } from '../LanguageContext';
 
 export default function ModaleCliente({ clienteInModifica, formCliente, setFormCliente, onSalva, onAnnulla }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const isEdit = !!clienteInModifica;
+  const [loading, setLoading] = useState(false);
+
+  const handleSalva = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      await onSalva();
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div onClick={(e) => { if (e.target === e.currentTarget) onAnnulla(); }} style={overlay}>
@@ -33,10 +44,27 @@ export default function ModaleCliente({ clienteInModifica, formCliente, setFormC
         </div>
 
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={onAnnulla} style={cancelBtn}>{t('cancel')}</button>
-          <button onClick={onSalva} style={saveBtn}>{t('save')}</button>
+          <button onClick={onAnnulla} disabled={loading} style={cancelBtn}>{t('cancel')}</button>
+          <button onClick={handleSalva} disabled={loading} style={{
+            ...saveBtn,
+            background: loading ? '#94A3B8' : '#5D5C9E',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+          }}>
+            {loading ? (
+              <>
+                <span style={{
+                  width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.4)',
+                  borderTopColor: 'white', borderRadius: '50%',
+                  animation: 'spin 0.7s linear infinite', display: 'inline-block',
+                }} />
+                {lang === 'it' ? 'Salvataggio...' : 'Saving...'}
+              </>
+            ) : t('save')}
+          </button>
         </div>
       </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

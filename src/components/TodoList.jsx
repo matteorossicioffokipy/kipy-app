@@ -115,12 +115,9 @@ export default function TodoList({ supabase, user }) {
                 {todo.completato ? <CheckCircle color="#88C999" size={26} /> : <Circle color="#CBD5E1" size={26} />}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {todo.isAppuntamento && <Calendar size={14} color="#88C999" />}
-                  <span style={{ textDecoration: todo.completato ? 'line-through' : 'none', color: todo.completato ? '#94A3B8' : '#1E293B', fontWeight: '800', fontSize: '16px' }}>
-                    {todo.testo}
-                  </span>
-                </div>
+                <span style={{ textDecoration: todo.completato ? 'line-through' : 'none', color: todo.completato ? '#94A3B8' : '#1E293B', fontWeight: '800', fontSize: '16px' }}>
+                  {todo.testo}
+                </span>
                 {todo.orario && (
                   <span style={{ fontSize: '13px', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
                     <Clock size={14} /> {todo.orario.substring(0, 5)}
