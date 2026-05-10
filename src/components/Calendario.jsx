@@ -101,6 +101,7 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
       note_dettagliate: app.note_dettagliate || '',
       colore: app.colore || orangeKipy,
       categoria: app.categoria || '',
+      importo: app.importo || '',
     });
     setAppModifica(app);
   };
@@ -116,6 +117,7 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
       note_dettagliate: formModifica.note_dettagliate || null,
       colore: formModifica.colore || orangeKipy,
       categoria: formModifica.categoria || null,
+      importo: formModifica.importo ? parseFloat(formModifica.importo) : null,
     }).eq('id', appModifica.id);
     if (!error) { setAppModifica(null); fetchDati(); }
     else alert('Errore: ' + error.message);
@@ -143,23 +145,19 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
     }
   };
 
-  // ── REMINDER SETTIMANALE ──
   const inviaReminderSettimanale = () => {
     const giorni = getGiorniSettimana();
     const inizioSett = formattaLocale(giorni[0]);
     const fineSett = formattaLocale(giorni[6]);
-
     const appSettimana = (appuntamenti || []).filter(a => {
       const start = a.data;
       const end = a.data_fine || a.data;
       return start <= fineSett && end >= inizioSett;
     });
-
     if (appSettimana.length === 0) {
       alert(lang === 'it' ? 'Nessun appuntamento questa settimana.' : 'No appointments this week.');
       return;
     }
-
     const gruppi = {};
     appSettimana.forEach(app => {
       const cliente = (clienti || []).find(c =>
@@ -170,16 +168,11 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
       if (!gruppi[nomeCliente]) gruppi[nomeCliente] = { apps: [], tel, cliente };
       gruppi[nomeCliente].apps.push(app);
     });
-
     const clientiMultipli = Object.entries(gruppi).filter(([, v]) => v.apps.length >= 2);
-
     if (clientiMultipli.length === 0) {
-      alert(lang === 'it'
-        ? 'Nessun cliente ha più di un appuntamento questa settimana.'
-        : 'No client has more than one appointment this week.');
+      alert(lang === 'it' ? 'Nessun cliente ha più di un appuntamento questa settimana.' : 'No client has more than one appointment this week.');
       return;
     }
-
     if (clientiMultipli.length === 1) {
       mandaReminderCliente(clientiMultipli[0][0], clientiMultipli[0][1]);
     } else {
@@ -193,18 +186,15 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
       if (a.data !== b.data) return a.data.localeCompare(b.data);
       return a.ora.localeCompare(b.ora);
     });
-
     const locale = lang === 'it' ? 'it-IT' : 'en-GB';
     const listaApp = appOrdinati.map(app => {
       const dataObj = new Date(app.data + 'T00:00:00');
       const dataFmt = dataObj.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' });
       return `📅 ${dataFmt} — ${lang === 'it' ? 'ore' : 'at'} ${fmtOra(app.ora)}${app.ora_fine ? ` → ${fmtOra(app.ora_fine)}` : ''}${app.categoria ? ` (${app.categoria})` : ''}`;
     }).join('\n');
-
     const testo = lang === 'it'
       ? `Ciao ${nomeCliente}! 👋\nEcco i tuoi appuntamenti questa settimana:\n\n${listaApp}\n\nA presto!\n— ${config?.nome_azienda || 'KIPRI'}`
       : `Hi ${nomeCliente}! 👋\nHere are your appointments this week:\n\n${listaApp}\n\nSee you soon!\n— ${config?.nome_azienda || 'KIPRI'}`;
-
     const encoded = encodeURIComponent(testo);
     if (tel) {
       window.open(`https://wa.me/${tel}?text=${encoded}`, '_blank');
@@ -245,6 +235,7 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
             <button onClick={() => cambiaSettimana(1)} style={{ border: 'none', background: '#F8FAFC', padding: '6px', borderRadius: '10px', touchAction: 'manipulation' }}><ChevronRight size={18} /></button>
           </div>
         )}
+
         {!vistaSettimanale && (
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '10px' }}>
             <button onClick={() => setMeseVisualizzato(new Date(meseVisualizzato.getFullYear(), meseVisualizzato.getMonth() - 1, 1))} style={{ border: 'none', background: '#F8FAFC', padding: '6px', borderRadius: '10px', touchAction: 'manipulation' }}><ChevronLeft size={18} /></button>
@@ -277,10 +268,7 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
 
       {/* REMINDER SETTIMANALE */}
       {vistaSettimanale && proMemoriaAttivo && (
-        <button
-          onClick={inviaReminderSettimanale}
-          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#DCFCE7', border: 'none', color: '#15803D', padding: '12px', borderRadius: '16px', cursor: 'pointer', fontFamily: "'Baloo 2', sans-serif", fontSize: '13px', fontWeight: '800', marginBottom: '16px', touchAction: 'manipulation' }}
-        >
+        <button onClick={inviaReminderSettimanale} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#DCFCE7', border: 'none', color: '#15803D', padding: '12px', borderRadius: '16px', cursor: 'pointer', fontFamily: "'Baloo 2', sans-serif", fontSize: '13px', fontWeight: '800', marginBottom: '16px', touchAction: 'manipulation' }}>
           <Users size={16} />
           {lang === 'it' ? 'Invia reminder settimana' : 'Send weekly reminder'}
         </button>
@@ -320,6 +308,16 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
                           {lang === 'it' ? 'Multi-giorno' : 'Multi-day'}
                         </span>
                       )}
+                      {app.importo && !app.completato && (
+                        <span style={{ fontSize: '10px', background: '#DCFCE7', color: '#15803D', padding: '1px 8px', borderRadius: '20px', fontWeight: '700' }}>
+                          💰 {app.importo}
+                        </span>
+                      )}
+                      {app.completato && (
+                        <span style={{ fontSize: '10px', background: '#F0FFF4', color: '#15803D', padding: '1px 8px', borderRadius: '20px', fontWeight: '700' }}>
+                          ✓ {lang === 'it' ? 'Incassato' : 'Collected'}
+                        </span>
+                      )}
                     </div>
                     <div style={{ fontWeight: '800', fontSize: '14px', color: '#1E293B' }}>{app.titolo}</div>
                     {isMultiGiorno(app) && (
@@ -343,15 +341,12 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
                         <MessageCircle size={16} />
                       </button>
                     )}
-                    <button onClick={() => apriModifica(app)} style={{ background: '#EFF6FF', border: 'none', color: '#3B82F6', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}>
-                    <Pencil size={16} />
-                  </button>
                     {app.importo && !app.completato && onConferma && (
                       <button onClick={() => onConferma(app)} title={lang === 'it' ? 'Conferma incasso' : 'Confirm payment'} style={{ background: '#DCFCE7', border: 'none', color: '#15803D', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}>
                         <CheckCircle size={16} />
                       </button>
                     )}
-                    <button onClick={() => eliminaAppuntamento(app.id)} style={{ background: '#FEF2F2',
+                    <button onClick={() => apriModifica(app)} style={{ background: '#EFF6FF', border: 'none', color: '#3B82F6', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}>
                       <Pencil size={16} />
                     </button>
                     <button onClick={() => eliminaAppuntamento(app.id)} style={{ background: '#FEF2F2', border: 'none', color: '#EF4444', padding: '8px', borderRadius: '10px', cursor: 'pointer', touchAction: 'manipulation' }}>
