@@ -125,6 +125,7 @@ export default function Fatture({ supabase, user, clienti, config }) {
     <div class="company-info">
       <div class="name">${config?.nome_azienda || ''}</div>
       ${config?.settore ? `<p>${config.settore}</p>` : ''}
+      ${config?.codice_fiscale ? `<p>${isIT ? 'P.IVA' : 'VAT'}: ${config.codice_fiscale}</p>` : ''}
       ${config?.email_business ? `<p>${config.email_business}</p>` : ''}
     </div>
   </div>
@@ -145,6 +146,7 @@ export default function Fatture({ supabase, user, clienti, config }) {
       <div class="party-label">${isIT ? 'Da' : 'From'}</div>
       <div class="party-name">${config?.nome_azienda || ''}</div>
       ${config?.settore ? `<p>${config.settore}</p>` : ''}
+      ${config?.codice_fiscale ? `<p>${isIT ? 'P.IVA' : 'VAT'}: ${config.codice_fiscale}</p>` : ''}
       ${config?.email_business ? `<p>${config.email_business}</p>` : ''}
     </div>
     <div class="party-box">
@@ -152,6 +154,7 @@ export default function Fatture({ supabase, user, clienti, config }) {
       <div class="party-name">${cliente?.nome || ''}</div>
       ${cliente?.email ? `<p>${cliente.email}</p>` : ''}
       ${cliente?.tel ? `<p>${cliente.tel}</p>` : ''}
+      ${cliente?.codice_fiscale ? `<p>${isIT ? 'P.IVA' : 'VAT'}: ${cliente.codice_fiscale}</p>` : ''}
       ${cliente?.indirizzo ? `<p>${cliente.indirizzo}</p>` : ''}
     </div>
   </div>

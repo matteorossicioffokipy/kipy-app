@@ -20,6 +20,7 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
       promemoria_testo: config.promemoria_testo ?? '',
       iban: config.iban ?? '',
       nome_banca: config.nome_banca ?? '',
+      codice_fiscale: config.codice_fiscale ?? '',
       formato_orario: config.formato_orario ?? '24h',
     }).eq('user_id', user.id);
     if (!error) {
@@ -268,7 +269,13 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
         <input style={inputStyle}
           value={config.nome_banca || ''}
           onChange={(e) => setConfig({ ...config, nome_banca: e.target.value })}
-          placeholder={lang === 'it' ? 'Es: Banca Intesa, Revolut...' : 'E.g. Barclays, Revolut...'} />
+          placeholder={lang === 'it' ? 'Es: Banca Intesa, Revolut...' : 'E.g. Barclays, Revolut...'}/>
+        <label style={{ ...labelStyle, marginTop: '10px' }}>{lang === 'it' ? 'P.IVA / Codice Fiscale' : 'VAT / Company number'}</label>
+        <input style={inputStyle}
+          value={config.codice_fiscale || ''}
+          onChange={(e) => setConfig({ ...config, codice_fiscale: e.target.value })}
+          placeholder={lang === 'it' ? 'Es: IT12345678901' : 'E.g: GB123456789'}
+        /> />
         <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>
           {lang === 'it' ? 'Apparirà automaticamente sulle fatture emesse.' : 'Will appear automatically on issued invoices.'}
         </p>

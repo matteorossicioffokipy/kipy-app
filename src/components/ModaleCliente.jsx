@@ -36,6 +36,15 @@ export default function ModaleCliente({ clienteInModifica, formCliente, setFormC
           <input style={inp} placeholder="mario@email.com" type="email" value={formCliente.email}
             onChange={e => setFormCliente({ ...formCliente, email: e.target.value })} />
         </div>
+        <div style={{ marginBottom: '12px' }}>
+          <label style={lbl}>
+            {lang === 'it' ? 'P.IVA / Codice Fiscale cliente' : 'VAT / Company number'}
+          </label>
+          <input style={inp}
+            placeholder={lang === 'it' ? 'Es: IT12345678901' : 'E.g: GB123456789'}
+            value={formCliente.codice_fiscale || ''}
+            onChange={e => setFormCliente({ ...formCliente, codice_fiscale: e.target.value })} />
+        </div>
         <div style={{ marginBottom: '20px' }}>
           <label style={lbl}>{t('rubrica_notes')}</label>
           <textarea style={{ ...inp, minHeight: '72px', resize: 'vertical' }}
@@ -53,11 +62,7 @@ export default function ModaleCliente({ clienteInModifica, formCliente, setFormC
           }}>
             {loading ? (
               <>
-                <span style={{
-                  width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.4)',
-                  borderTopColor: 'white', borderRadius: '50%',
-                  animation: 'spin 0.7s linear infinite', display: 'inline-block',
-                }} />
+                <span style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
                 {lang === 'it' ? 'Salvataggio...' : 'Saving...'}
               </>
             ) : t('save')}
