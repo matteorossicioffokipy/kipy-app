@@ -22,7 +22,7 @@ export default function ModaleCliente({ clienteInModifica, formCliente, setFormC
         <h3 style={title}>{isEdit ? t('rubrica_editClient') : t('rubrica_addClient')}</h3>
 
         <div style={{ marginBottom: '12px' }}>
-          <label style={lbl}>{t('rubrica_name')} *</label>
+          <label style={lbl}>{t('rubrica_name')}</label>
           <input style={inp} placeholder="Mario Rossi" value={formCliente.nome}
             onChange={e => setFormCliente({ ...formCliente, nome: e.target.value })} autoFocus />
         </div>
@@ -48,7 +48,7 @@ export default function ModaleCliente({ clienteInModifica, formCliente, setFormC
         <div style={{ marginBottom: '20px' }}>
           <label style={lbl}>{t('rubrica_notes')}</label>
           <textarea style={{ ...inp, minHeight: '72px', resize: 'vertical' }}
-            placeholder={t('rubrica_notesPlaceholder')} value={formCliente.note}
+            placeholder={lang === 'it' ? 'Es: cliente importante, sconto...' : 'E.g: important client, discount...'} value={formCliente.note}
             onChange={e => setFormCliente({ ...formCliente, note: e.target.value })} />
         </div>
 
