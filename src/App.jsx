@@ -109,6 +109,23 @@ export default function App() {
     }
   };
 
+  const confermaAppuntamento = async (app) => {
+    if (!app.importo) return;
+    const { error } = await supabase.from('movimenti').insert([{
+      user_id: user.id,
+      tipo: 'entrata',
+      importo: parseFloat(app.importo),
+      categoria: app.categoria || (lang === 'it' ? 'Appuntamento' : 'Appointment'),
+      descrizione: app.titolo,
+      data: app.data,
+    }]);
+    if (!error) {
+      await supabase.from('appuntamenti').update({ completato: true }).eq('id', app.id);
+      fetchDati();
+      alert(lang === 'it' ? `✓ Incasso di €${app.importo} aggiunto alle Entrate!` : `✓ Income of £${app.importo} added to Finances!`);
+    }
+  };
+
   const handleSalvaAppuntamento = async (dateExtra = []) => {
     if (!formApp.titolo.trim() || !formApp.data || !formApp.ora)
       return alert(t('appt_fillAll'));
@@ -237,7 +254,7 @@ export default function App() {
 
         {vista === 'CALENDARIO' && (
           <Calendario appuntamenti={appuntamenti} setMostraModuloApp={setMostraModuloApp}
-            supabase={supabase} fetchDati={fetchDati} config={config} clienti={clienti} />
+            supabase={supabase} fetchDati={fetchDati} config={config} clienti={clienti} onConferma={confermaAppuntamento} />
         )}
 
         {vista === 'TODO' && <TodoList supabase={supabase} user={user} />}

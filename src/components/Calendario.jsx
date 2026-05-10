@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Clock, Trash2, Plus, Calendar as CalIcon, MessageCircle, Pencil, FileText, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Trash2, Plus, Calendar as CalIcon, MessageCircle, Pencil, FileText, Users, CheckCircle } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 import ModaleAppuntamento from './ModaleAppuntamento';
 import { formatOra } from '../utils/timeFormat';
 
-export default function Calendario({ appuntamenti, setMostraModuloApp, supabase, fetchDati, config, clienti }) {
+export default function Calendario({ appuntamenti, setMostraModuloApp, supabase, fetchDati, config, clienti, onConferma }) {
   const { t, lang } = useLang();
   const oggiCorretto = new Date().toLocaleDateString('en-CA');
   const [dataSelezionata, setDataSelezionata] = useState(oggiCorretto);
@@ -344,6 +344,14 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
                       </button>
                     )}
                     <button onClick={() => apriModifica(app)} style={{ background: '#EFF6FF', border: 'none', color: '#3B82F6', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}>
+                    <Pencil size={16} />
+                  </button>
+                    {app.importo && !app.completato && onConferma && (
+                      <button onClick={() => onConferma(app)} title={lang === 'it' ? 'Conferma incasso' : 'Confirm payment'} style={{ background: '#DCFCE7', border: 'none', color: '#15803D', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}>
+                        <CheckCircle size={16} />
+                      </button>
+                    )}
+                    <button onClick={() => eliminaAppuntamento(app.id)} style={{ background: '#FEF2F2',
                       <Pencil size={16} />
                     </button>
                     <button onClick={() => eliminaAppuntamento(app.id)} style={{ background: '#FEF2F2', border: 'none', color: '#EF4444', padding: '8px', borderRadius: '10px', cursor: 'pointer', touchAction: 'manipulation' }}>

@@ -138,7 +138,17 @@ export default function ModaleAppuntamento({ formApp, setFormApp, onSalva, onAnn
           </button>
         )}
 
-        {/* NOTE BREVI */}
+        {/* IMPORTO INCASSO */
+        <div style={{ marginBottom: '14px' }}>
+          <label style={lbl}>💰 {lang === 'it' ? 'Importo incasso (opzionale)' : 'Fee amount (optional)'}</label>
+          <input style={inp} type="number" step="0.01" placeholder="0.00"
+            value={formApp.importo || ''} onChange={e => setFormApp({ ...formApp, importo: e.target.value })} />
+          <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px', fontFamily: "'Baloo 2', sans-serif" }}>
+            {lang === 'it' ? 'Non visibile al cliente nel promemoria. Si aggiunge alle Entrate alla conferma.' : 'Not visible to client in reminders. Added to Income on confirmation.'}
+          </p>
+        </div>
+
+        /* NOTE BREVI */}
         <div style={{ marginBottom: '14px' }}>
           <label style={lbl}>Note</label>
           <input style={inp} placeholder={lang === 'it' ? 'Note brevi...' : 'Quick notes...'}
