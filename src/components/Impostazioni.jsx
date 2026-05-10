@@ -71,10 +71,11 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
   };
 
   const testoDefault = `Ciao! 👋\nTi ricordiamo il tuo appuntamento con ${config?.nome_azienda || 'noi'} {data} alle {ora}.\nA presto!`;
-
-  // Anteprima orario in base al formato scelto
   const formatoAttivo = config.formato_orario ?? '24h';
   const oraEsempio = formatoAttivo === '12h' ? '2:30 PM' : '14:30';
+  const testoPreview = (config.promemoria_testo && config.promemoria_testo !== 'null' && config.promemoria_testo !== 'NULL')
+    ? config.promemoria_testo
+    : testoDefault;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: "'Baloo 2', sans-serif" }}>
@@ -148,21 +149,15 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
         </div>
         <p style={{ fontSize: '12px', color: '#94A3B8', margin: '0 0 10px' }}>
           {lang === 'it'
-            ? 'Scegli come visualizzare gli orari in tutta l\'app e nei promemoria.'
+            ? "Scegli come visualizzare gli orari in tutta l'app e nei promemoria."
             : 'Choose how times are displayed across the app and in reminders.'}
         </p>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <div
-            onClick={() => setConfig({ ...config, formato_orario: '24h' })}
-            style={formatoChipStyle(formatoAttivo === '24h')}
-          >
+          <div onClick={() => setConfig({ ...config, formato_orario: '24h' })} style={formatoChipStyle(formatoAttivo === '24h')}>
             <div style={{ fontSize: '18px', fontWeight: '900' }}>14:30</div>
             <div style={{ fontSize: '11px', marginTop: '2px' }}>24h</div>
           </div>
-          <div
-            onClick={() => setConfig({ ...config, formato_orario: '12h' })}
-            style={formatoChipStyle(formatoAttivo === '12h')}
-          >
+          <div onClick={() => setConfig({ ...config, formato_orario: '12h' })} style={formatoChipStyle(formatoAttivo === '12h')}>
             <div style={{ fontSize: '18px', fontWeight: '900' }}>2:30 PM</div>
             <div style={{ fontSize: '11px', marginTop: '2px' }}>12h AM/PM</div>
           </div>
@@ -237,14 +232,14 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
             <div style={{ fontSize: '11px', color: '#94A3B8', marginBottom: '8px' }}>{t('impostazioni_placeholders')}</div>
             <textarea
               style={{ ...inputStyle, minHeight: '100px', resize: 'vertical' }}
-              value={config.promemoria_testo value={config.promemoria_testo && config.promemoria_testo !== 'null' ? config.promemoria_testo : testoDefault}value={config.promemoria_testo && config.promemoria_testo !== 'null' ? config.promemoria_testo : testoDefault} config.promemoria_testo !== 'null' value={config.promemoria_testo && config.promemoria_testo !== 'null' ? config.promemoria_testo : testoDefault}value={config.promemoria_testo && config.promemoria_testo !== 'null' ? config.promemoria_testo : testoDefault} config.promemoria_testo !== 'NULL' ? config.promemoria_testo : testoDefault}
+              value={testoPreview}
               onChange={(e) => setConfig({ ...config, promemoria_testo: e.target.value })}
               placeholder={testoDefault}
             />
             <div style={previewStyle}>
               <div style={{ fontSize: '11px', fontWeight: '700', color: '#128C7E', marginBottom: '8px' }}>{t('impostazioni_preview')}</div>
               <div style={bubbleStyle}>
-                {(config.promemoria_testo (config.promemoria_testo && config.promemoria_testo !== 'null' ? config.promemoria_testo : testoDefault)(config.promemoria_testo && config.promemoria_testo !== 'null' ? config.promemoria_testo : testoDefault) config.promemoria_testo !== 'null' (config.promemoria_testo && config.promemoria_testo !== 'null' ? config.promemoria_testo : testoDefault)(config.promemoria_testo && config.promemoria_testo !== 'null' ? config.promemoria_testo : testoDefault) config.promemoria_testo !== 'NULL' ? config.promemoria_testo : testoDefault)
+                {testoPreview
                   .replace('{nome}', 'Mario')
                   .replace('{data}', 'domani')
                   .replace('{ora}', oraEsempio)}
@@ -269,13 +264,12 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
         <input style={inputStyle}
           value={config.nome_banca || ''}
           onChange={(e) => setConfig({ ...config, nome_banca: e.target.value })}
-          placeholder={lang === 'it' ? 'Es: Banca Intesa, Revolut...' : 'E.g. Barclays, Revolut...'}/>
+          placeholder={lang === 'it' ? 'Es: Banca Intesa, Revolut...' : 'E.g. Barclays, Revolut...'} />
         <label style={{ ...labelStyle, marginTop: '10px' }}>{lang === 'it' ? 'P.IVA / Codice Fiscale' : 'VAT / Company number'}</label>
         <input style={inputStyle}
           value={config.codice_fiscale || ''}
           onChange={(e) => setConfig({ ...config, codice_fiscale: e.target.value })}
-          placeholder={lang === 'it' ? 'Es: IT12345678901' : 'E.g: GB123456789'}
-        /> />
+          placeholder={lang === 'it' ? 'Es: IT12345678901' : 'E.g: GB123456789'} />
         <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>
           {lang === 'it' ? 'Apparirà automaticamente sulle fatture emesse.' : 'Will appear automatically on issued invoices.'}
         </p>
