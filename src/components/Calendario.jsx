@@ -57,6 +57,13 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
     return giorni;
   };
 
+  const cambiaSettimana = (offset) => {
+    const pezzi = dataSelezionata.split('-');
+    const d = new Date(pezzi[0], pezzi[1] - 1, pezzi[2]);
+    d.setDate(d.getDate() + offset * 7);
+    setDataSelezionata(d.toLocaleDateString('en-CA'));
+  };
+
   const isOggi = (date) => date && formattaLocale(date) === oggiCorretto;
   const isSelezionato = (date) => date && formattaLocale(date) === dataSelezionata;
 
@@ -232,6 +239,12 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
           </div>
         </div>
 
+        {vistaSettimanale && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '10px' }}>
+            <button onClick={() => cambiaSettimana(-1)} style={{ border: 'none', background: '#F8FAFC', padding: '6px', borderRadius: '10px', touchAction: 'manipulation' }}><ChevronLeft size={18} /></button>
+            <button onClick={() => cambiaSettimana(1)} style={{ border: 'none', background: '#F8FAFC', padding: '6px', borderRadius: '10px', touchAction: 'manipulation' }}><ChevronRight size={18} /></button>
+          </div>
+        )}
         {!vistaSettimanale && (
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '10px' }}>
             <button onClick={() => setMeseVisualizzato(new Date(meseVisualizzato.getFullYear(), meseVisualizzato.getMonth() - 1, 1))} style={{ border: 'none', background: '#F8FAFC', padding: '6px', borderRadius: '10px', touchAction: 'manipulation' }}><ChevronLeft size={18} /></button>
