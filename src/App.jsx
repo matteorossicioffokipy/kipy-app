@@ -109,12 +109,17 @@ export default function App() {
     }
   };
 
-  const handleSalvaAppuntamento = async () => {
+  const handleSalvaAppuntamento = async (dateExtra = []) => {
     if (!formApp.titolo.trim() || !formApp.data || !formApp.ora)
       return alert(t('appt_fillAll'));
     const { error } = await supabase
       .from('appuntamenti')
       .insert([{ ...formApp, user_id: user.id }]);
+    // Inserisce appuntamenti extra se presenti
+    if (dateExtra.length > 0) {
+      const extra = dateExtra.filter(d => d.data && d.ora).map(d => ({ ...formApp, data: d.data, data_fine: d.data, ora: d.ora, ora_fine: d.ora_fine || null, user_id: user.id }));
+      if (extra.length > 0) await supabase.from('appuntamenti').insert(extra);
+    }
     if (!error) {
       setMostraModuloApp(false);
       setFormApp({ titolo: '', data: '', ora: '' });
