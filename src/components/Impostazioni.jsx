@@ -237,14 +237,14 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
             <div style={{ fontSize: '11px', color: '#94A3B8', marginBottom: '8px' }}>{t('impostazioni_placeholders')}</div>
             <textarea
               style={{ ...inputStyle, minHeight: '100px', resize: 'vertical' }}
-              value={config.promemoria_testo && config.promemoria_testo !== 'null' ? config.promemoria_testo : testoDefault}
+              value={config.promemoria_testo value={config.promemoria_testo && config.promemoria_testo !== 'null' ? config.promemoria_testo : testoDefault}value={config.promemoria_testo && config.promemoria_testo !== 'null' ? config.promemoria_testo : testoDefault} config.promemoria_testo !== 'null' value={config.promemoria_testo && config.promemoria_testo !== 'null' ? config.promemoria_testo : testoDefault}value={config.promemoria_testo && config.promemoria_testo !== 'null' ? config.promemoria_testo : testoDefault} config.promemoria_testo !== 'NULL' ? config.promemoria_testo : testoDefault}
               onChange={(e) => setConfig({ ...config, promemoria_testo: e.target.value })}
               placeholder={testoDefault}
             />
             <div style={previewStyle}>
               <div style={{ fontSize: '11px', fontWeight: '700', color: '#128C7E', marginBottom: '8px' }}>{t('impostazioni_preview')}</div>
               <div style={bubbleStyle}>
-                {(config.promemoria_testo && config.promemoria_testo !== 'null' ? config.promemoria_testo : testoDefault)
+                {(config.promemoria_testo (config.promemoria_testo && config.promemoria_testo !== 'null' ? config.promemoria_testo : testoDefault)(config.promemoria_testo && config.promemoria_testo !== 'null' ? config.promemoria_testo : testoDefault) config.promemoria_testo !== 'null' (config.promemoria_testo && config.promemoria_testo !== 'null' ? config.promemoria_testo : testoDefault)(config.promemoria_testo && config.promemoria_testo !== 'null' ? config.promemoria_testo : testoDefault) config.promemoria_testo !== 'NULL' ? config.promemoria_testo : testoDefault)
                   .replace('{nome}', 'Mario')
                   .replace('{data}', 'domani')
                   .replace('{ora}', oraEsempio)}
