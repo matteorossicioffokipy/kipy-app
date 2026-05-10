@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Clock, Trash2, Plus, Calendar as CalIcon, MessageCircle, Pencil, FileText, Users } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 import ModaleAppuntamento from './ModaleAppuntamento';
+import { formatOra } from '../utils/timeFormat';
 
 export default function Calendario({ appuntamenti, setMostraModuloApp, supabase, fetchDati, config, clienti }) {
   const { t, lang } = useLang();
@@ -12,11 +13,12 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
   const [appModifica, setAppModifica] = useState(null);
   const [formModifica, setFormModifica] = useState({});
   const [noteAperte, setNoteAperte] = useState(null);
-  const [pickerClienti, setPickerClienti] = useState(null); // lista clienti per il picker
+  const [pickerClienti, setPickerClienti] = useState(null);
 
   const orangeKipy = '#FFB347';
   const lightOrange = '#FFF7ED';
   const proMemoriaAttivo = config?.promemoria_attivo ?? true;
+  const fmtOra = (ora) => formatOra(ora, config?.formato_orario ?? '24h');
 
   const getColore = (app) => app.colore || orangeKipy;
 
@@ -125,7 +127,7 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
     const testo = testoTemplate
       .replace('{nome}', cliente?.nome || '')
       .replace('{data}', dataFormattata)
-      .replace('{ora}', app.ora?.slice(0, 5) || '');
+      .replace('{ora}', fmtOra(app.ora));
     const testoEncoded = encodeURIComponent(testo);
     if (tel) {
       window.open(`https://wa.me/${tel}?text=${testoEncoded}`, '_blank');
@@ -140,7 +142,6 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
     const inizioSett = formattaLocale(giorni[0]);
     const fineSett = formattaLocale(giorni[6]);
 
-    // Filtra appuntamenti della settimana
     const appSettimana = (appuntamenti || []).filter(a => {
       const start = a.data;
       const end = a.data_fine || a.data;
@@ -152,7 +153,6 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
       return;
     }
 
-    // Raggruppa per cliente (matching nome nel titolo)
     const gruppi = {};
     appSettimana.forEach(app => {
       const cliente = (clienti || []).find(c =>
@@ -164,7 +164,6 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
       gruppi[nomeCliente].apps.push(app);
     });
 
-    // Solo clienti con 2+ appuntamenti
     const clientiMultipli = Object.entries(gruppi).filter(([, v]) => v.apps.length >= 2);
 
     if (clientiMultipli.length === 0) {
@@ -175,10 +174,8 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
     }
 
     if (clientiMultipli.length === 1) {
-      // Manda direttamente
       mandaReminderCliente(clientiMultipli[0][0], clientiMultipli[0][1]);
     } else {
-      // Mostra picker
       setPickerClienti(clientiMultipli);
     }
   };
@@ -194,7 +191,7 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
     const listaApp = appOrdinati.map(app => {
       const dataObj = new Date(app.data + 'T00:00:00');
       const dataFmt = dataObj.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' });
-      return `📅 ${dataFmt} — ${lang === 'it' ? 'ore' : 'at'} ${app.ora.slice(0, 5)}${app.ora_fine ? ` → ${app.ora_fine.slice(0, 5)}` : ''}${app.categoria ? ` (${app.categoria})` : ''}`;
+      return `📅 ${dataFmt} — ${lang === 'it' ? 'ore' : 'at'} ${fmtOra(app.ora)}${app.ora_fine ? ` → ${fmtOra(app.ora_fine)}` : ''}${app.categoria ? ` (${app.categoria})` : ''}`;
     }).join('\n');
 
     const testo = lang === 'it'
@@ -265,17 +262,11 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
         </div>
       </div>
 
-      {/* REMINDER SETTIMANALE — solo in vista settimana */}
+      {/* REMINDER SETTIMANALE */}
       {vistaSettimanale && proMemoriaAttivo && (
         <button
           onClick={inviaReminderSettimanale}
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-            background: '#DCFCE7', border: 'none', color: '#15803D',
-            padding: '12px', borderRadius: '16px', cursor: 'pointer',
-            fontFamily: "'Baloo 2', sans-serif", fontSize: '13px', fontWeight: '800',
-            marginBottom: '16px', touchAction: 'manipulation',
-          }}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#DCFCE7', border: 'none', color: '#15803D', padding: '12px', borderRadius: '16px', cursor: 'pointer', fontFamily: "'Baloo 2', sans-serif", fontSize: '13px', fontWeight: '800', marginBottom: '16px', touchAction: 'manipulation' }}
         >
           <Users size={16} />
           {lang === 'it' ? 'Invia reminder settimana' : 'Send weekly reminder'}
@@ -304,7 +295,7 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '2px', flexWrap: 'wrap' }}>
                       <Clock size={12} color={colore} />
                       <span style={{ fontSize: '12px', fontWeight: '800', color: colore }}>
-                        {app.ora.slice(0, 5)}{app.ora_fine ? ` → ${app.ora_fine.slice(0, 5)}` : ''}
+                        {fmtOra(app.ora)}{app.ora_fine ? ` → ${fmtOra(app.ora_fine)}` : ''}
                       </span>
                       {app.categoria && (
                         <span style={{ fontSize: '10px', background: colore + '22', color: colore, padding: '1px 8px', borderRadius: '20px', fontWeight: '700' }}>
@@ -384,16 +375,10 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
         />
       )}
 
-      {/* PICKER CLIENTE per reminder settimanale */}
+      {/* PICKER CLIENTE */}
       {pickerClienti && (
-        <div
-          onClick={() => setPickerClienti(null)}
-          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px', boxSizing: 'border-box' }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{ background: 'white', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '360px', boxSizing: 'border-box', boxShadow: '0 20px 60px rgba(0,0,0,0.18)' }}
-          >
+        <div onClick={() => setPickerClienti(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px', boxSizing: 'border-box' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '360px', boxSizing: 'border-box', boxShadow: '0 20px 60px rgba(0,0,0,0.18)' }}>
             <h3 style={{ margin: '0 0 6px', fontFamily: "'Baloo 2', sans-serif", fontSize: '18px', fontWeight: '800', color: '#1E293B' }}>
               {lang === 'it' ? 'Scegli il cliente' : 'Choose client'}
             </h3>
@@ -402,26 +387,13 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {pickerClienti.map(([nome, dati]) => (
-                <button
-                  key={nome}
-                  onClick={() => mandaReminderCliente(nome, dati)}
-                  style={{
-                    background: '#F8FAFC', border: '1.5px solid #E2E8F0', borderRadius: '14px',
-                    padding: '12px 16px', cursor: 'pointer', textAlign: 'left',
-                    fontFamily: "'Baloo 2', sans-serif",
-                  }}
-                >
+                <button key={nome} onClick={() => mandaReminderCliente(nome, dati)} style={{ background: '#F8FAFC', border: '1.5px solid #E2E8F0', borderRadius: '14px', padding: '12px 16px', cursor: 'pointer', textAlign: 'left', fontFamily: "'Baloo 2', sans-serif" }}>
                   <div style={{ fontWeight: '800', fontSize: '14px', color: '#1E293B' }}>{nome}</div>
-                  <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '2px' }}>
-                    {dati.apps.length} {lang === 'it' ? 'appuntamenti' : 'appointments'}
-                  </div>
+                  <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '2px' }}>{dati.apps.length} {lang === 'it' ? 'appuntamenti' : 'appointments'}</div>
                 </button>
               ))}
             </div>
-            <button
-              onClick={() => setPickerClienti(null)}
-              style={{ width: '100%', marginTop: '14px', background: '#F1F5F9', border: 'none', borderRadius: '12px', padding: '12px', cursor: 'pointer', fontFamily: "'Baloo 2', sans-serif", fontWeight: '700', color: '#64748B', fontSize: '14px' }}
-            >
+            <button onClick={() => setPickerClienti(null)} style={{ width: '100%', marginTop: '14px', background: '#F1F5F9', border: 'none', borderRadius: '12px', padding: '12px', cursor: 'pointer', fontFamily: "'Baloo 2', sans-serif", fontWeight: '700', color: '#64748B', fontSize: '14px' }}>
               {lang === 'it' ? 'Annulla' : 'Cancel'}
             </button>
           </div>
