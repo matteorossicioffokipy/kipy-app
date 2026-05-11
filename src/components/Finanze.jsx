@@ -94,7 +94,7 @@ export default function Finanze({ supabase, user }) {
           <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#94A3B8' }}>{t('finanze_subtitle')}</p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={scaricaReport} style={iconBtn('#EEF8F2', '#15803D')} title={t('finanze_report')}><Download size={18} /></button>
+          <button onClick={scaricaReport} style={{ background: '#EEF8F2', color: '#15803D', border: 'none', width: '44px', height: '44px', borderRadius: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title={t('finanze_report')}><Download size={20} /></button>
           <button onClick={() => setMostraModale(true)} style={addBtn}><Plus size={20} /></button>
         </div>
       </div>
@@ -111,16 +111,16 @@ export default function Finanze({ supabase, user }) {
         <div style={summaryCard('#EEF8F2', '#15803D')}>
           <TrendingUp size={16} color="#15803D" />
           <div style={{ fontSize: '11px', marginTop: '4px' }}>{t('finanze_income')}</div>
-          <div style={{ fontSize: '20px', fontWeight: '800' }}>{currency}{totEntrate.toFixed(0)}</div>
+          <div style={{ fontSize: '20px', fontWeight: '800' }}>{currency}{totEntrate.toFixed(2)}</div>
         </div>
         <div style={summaryCard('#FEF2F2', '#EF4444')}>
           <TrendingDown size={16} color="#EF4444" />
           <div style={{ fontSize: '11px', marginTop: '4px' }}>{t('finanze_expenses')}</div>
-          <div style={{ fontSize: '20px', fontWeight: '800' }}>{currency}{totUscite.toFixed(0)}</div>
+          <div style={{ fontSize: '20px', fontWeight: '800' }}>{currency}{totUscite.toFixed(2)}</div>
         </div>
         <div style={summaryCard(saldo >= 0 ? '#EEEEF8' : '#FEF2F2', saldo >= 0 ? '#5D5C9E' : '#EF4444')}>
-          <div style={{ fontSize: '11px', marginTop: '4px' }}>{t('finanze_balance')}</div>
-          <div style={{ fontSize: '20px', fontWeight: '800' }}>{currency}{saldo.toFixed(0)}</div>
+          <div style={{ fontSize: '11px', marginTop: '4px', textAlign: 'center', width: '100%' }}>{t('finanze_balance')}</div>
+          <div style={{ fontSize: '20px', fontWeight: '800' }}>{currency}{saldo.toFixed(2)}</div>
         </div>
       </div>
 
