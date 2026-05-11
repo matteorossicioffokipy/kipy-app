@@ -279,7 +279,7 @@ export default function App() {
 
         {vista === 'TODO' && <TodoList supabase={supabase} user={user} />}
 
-        {vista === 'BUSINESS_CARD' && <BusinessCard config={config} user={user} supabase={supabase} fetchDati={fetchDati} />}
+        {vista === 'BUSINESS_CARD' && <BusinessCard config={config} user={user} supabase={supabase} fetchDati={fetchDati} isPro={isPro} />}
 
         {vista === 'FATTURE' && (
           isPro
