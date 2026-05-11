@@ -77,6 +77,25 @@ export default function App() {
     const { data: appData } = await supabase
       .from('appuntamenti').select('*').eq('user_id', user.id);
     setAppuntamenti(appData || []);
+    await verificaIncassiAutomatici(appData);
+  };
+
+  const verificaIncassiAutomatici = async (appData) => {
+    const oggi = new Date().toLocaleDateString('en-CA');
+    const daIncassare = (appData || []).filter(a =>
+      a.importo && !a.completato && a.data < oggi
+    );
+    for (const app of daIncassare) {
+      await supabase.from('movimenti').insert([{
+        user_id: user.id,
+        tipo: 'entrata',
+        importo: parseFloat(app.importo),
+        categoria: app.categoria || 'Appuntamento',
+        descrizione: app.titolo,
+        data: app.data,
+      }]);
+      await supabase.from('appuntamenti').update({ completato: true }).eq('id', app.id);
+    }
   };
 
   const handleElimina = async (id) => {
