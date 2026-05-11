@@ -119,7 +119,8 @@ export default function Finanze({ supabase, user }) {
           <div style={{ fontSize: '20px', fontWeight: '800' }}>{currency}{totUscite.toFixed(2)}</div>
         </div>
         <div style={summaryCard(saldo >= 0 ? '#EEEEF8' : '#FEF2F2', saldo >= 0 ? '#5D5C9E' : '#EF4444')}>
-          <div style={{ fontSize: '11px', marginTop: '4px', textAlign: 'center', width: '100%' }}>{t('finanze_balance')}</div>
+          <span style={{ fontSize: '16px' }}>{saldo >= 0 ? '💰' : '⚠️'}</span>
+          <div style={{ fontSize: '11px', marginTop: '4px' }}>{t('finanze_balance')}</div>
           <div style={{ fontSize: '20px', fontWeight: '800' }}>{currency}{saldo.toFixed(2)}</div>
         </div>
       </div>
