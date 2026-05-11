@@ -12,6 +12,7 @@ import Login from './components/Login';
 import ResetPassword from './components/ResetPassword';
 import { Home, LogOut, Settings } from 'lucide-react';
 import { useLang } from './LanguageContext';
+import './app.css';
 import logo from './assets/logo.png';
 import quokka from './assets/quokka.png';
 import ModaleCliente from './components/ModaleCliente';
@@ -150,7 +151,7 @@ export default function App() {
   if (isResettingPassword) return <ResetPassword supabase={supabase} setIsResettingPassword={setIsResettingPassword} logo={logo} />;
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'rgba(241,245,249,0.92)', fontFamily: "'Baloo 2', sans-serif" }}>
+    <div className="app-wrapper" style={{ fontFamily: "'Baloo 2', sans-serif" }}>
 
       {/* ── HEADER ── */}
       <div style={headerStyle}>
