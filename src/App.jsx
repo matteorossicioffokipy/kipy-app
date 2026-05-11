@@ -294,7 +294,7 @@ export default function App() {
         )}
 
         {vista === 'IMPOSTAZIONI' && (
-          <Impostazioni config={config} setConfig={setConfig} supabase={supabase} user={user} fetchDati={fetchDati} />
+          <Impostazioni config={config} setConfig={setConfig} supabase={supabase} user={user} fetchDati={fetchDati} isPro={isPro} />
         )}
 
       </div>

@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
-import { Save, Upload, Check, MessageCircle, Building2, Image, Zap, Crown, Clock } from 'lucide-react';
+import { Save, Upload, Check, MessageCircle, Building2, Image, Zap, Crown, Clock, Lock } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 
-export default function Impostazioni({ config, setConfig, supabase, user, fetchDati }) {
+export default function Impostazioni({ config, setConfig, supabase, user, fetchDati, isPro }) {
   const { t, lang, switchLang } = useLang();
   const [loading, setLoading] = useState(false);
   const [salvato, setSalvato] = useState(false);
   const [loadingPro, setLoadingPro] = useState(false);
-
-  const isPro = config?.is_pro === true;
 
   const handleSave = async () => {
     setLoading(true);
@@ -148,9 +146,7 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
           {lang === 'it' ? 'Formato orario' : 'Time format'}
         </div>
         <p style={{ fontSize: '12px', color: '#94A3B8', margin: '0 0 10px' }}>
-          {lang === 'it'
-            ? "Scegli come visualizzare gli orari in tutta l'app e nei promemoria."
-            : 'Choose how times are displayed across the app and in reminders.'}
+          {lang === 'it' ? "Scegli come visualizzare gli orari in tutta l'app e nei promemoria." : 'Choose how times are displayed across the app and in reminders.'}
         </p>
         <div style={{ display: 'flex', gap: '10px' }}>
           <div onClick={() => setConfig({ ...config, formato_orario: '24h' })} style={formatoChipStyle(formatoAttivo === '24h')}>
@@ -249,31 +245,54 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
         )}
       </div>
 
-      {/* COORDINATE BANCARIE */}
-      <div style={sectionStyle}>
-        <div style={sectionTitleStyle}>
-          <div style={sectionIconStyle('#EEEEF8')}><span style={{ fontSize: '14px' }}>🏦</span></div>
-          {lang === 'it' ? 'Coordinate bancarie' : 'Payment details'}
+      {/* COORDINATE BANCARIE — solo Pro */}
+      {isPro ? (
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>
+            <div style={sectionIconStyle('#EEEEF8')}><span style={{ fontSize: '14px' }}>🏦</span></div>
+            {lang === 'it' ? 'Coordinate bancarie' : 'Payment details'}
+          </div>
+          <label style={labelStyle}>IBAN</label>
+          <input style={inputStyle}
+            value={config.iban || ''}
+            onChange={(e) => setConfig({ ...config, iban: e.target.value })}
+            placeholder="IT60 X054 2811 1010 0000 0123 456" />
+          <label style={{ ...labelStyle, marginTop: '10px' }}>{lang === 'it' ? 'Nome banca' : 'Bank name'}</label>
+          <input style={inputStyle}
+            value={config.nome_banca || ''}
+            onChange={(e) => setConfig({ ...config, nome_banca: e.target.value })}
+            placeholder={lang === 'it' ? 'Es: Banca Intesa, Revolut...' : 'E.g. Barclays, Revolut...'} />
+          <label style={{ ...labelStyle, marginTop: '10px' }}>{lang === 'it' ? 'P.IVA / Codice Fiscale' : 'VAT / Company number'}</label>
+          <input style={inputStyle}
+            value={config.codice_fiscale || ''}
+            onChange={(e) => setConfig({ ...config, codice_fiscale: e.target.value })}
+            placeholder={lang === 'it' ? 'Es: IT12345678901' : 'E.g: GB123456789'} />
+          <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>
+            {lang === 'it' ? 'Apparirà automaticamente sulle fatture emesse.' : 'Will appear automatically on issued invoices.'}
+          </p>
         </div>
-        <label style={labelStyle}>IBAN</label>
-        <input style={inputStyle}
-          value={config.iban || ''}
-          onChange={(e) => setConfig({ ...config, iban: e.target.value })}
-          placeholder="IT60 X054 2811 1010 0000 0123 456" />
-        <label style={{ ...labelStyle, marginTop: '10px' }}>{lang === 'it' ? 'Nome banca' : 'Bank name'}</label>
-        <input style={inputStyle}
-          value={config.nome_banca || ''}
-          onChange={(e) => setConfig({ ...config, nome_banca: e.target.value })}
-          placeholder={lang === 'it' ? 'Es: Banca Intesa, Revolut...' : 'E.g. Barclays, Revolut...'} />
-        <label style={{ ...labelStyle, marginTop: '10px' }}>{lang === 'it' ? 'P.IVA / Codice Fiscale' : 'VAT / Company number'}</label>
-        <input style={inputStyle}
-          value={config.codice_fiscale || ''}
-          onChange={(e) => setConfig({ ...config, codice_fiscale: e.target.value })}
-          placeholder={lang === 'it' ? 'Es: IT12345678901' : 'E.g: GB123456789'} />
-        <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>
-          {lang === 'it' ? 'Apparirà automaticamente sulle fatture emesse.' : 'Will appear automatically on issued invoices.'}
-        </p>
-      </div>
+      ) : (
+        <div style={{ ...sectionStyle, opacity: 0.7, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(255,255,255,0.7)', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '20px' }}>
+            <div style={{ textAlign: 'center', padding: '20px' }}>
+              <Lock size={24} color="#5D5C9E" style={{ marginBottom: '8px' }} />
+              <div style={{ fontSize: '13px', fontWeight: '800', color: '#5D5C9E' }}>
+                {lang === 'it' ? 'Disponibile con Pro' : 'Available with Pro'}
+              </div>
+              <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>
+                {lang === 'it' ? 'IBAN, banca e P.IVA sulle fatture' : 'IBAN, bank and VAT on invoices'}
+              </div>
+            </div>
+          </div>
+          <div style={sectionTitleStyle}>
+            <div style={sectionIconStyle('#EEEEF8')}><span style={{ fontSize: '14px' }}>🏦</span></div>
+            {lang === 'it' ? 'Coordinate bancarie' : 'Payment details'}
+          </div>
+          <div style={{ height: '40px', background: '#F1F5F9', borderRadius: '12px' }} />
+          <div style={{ height: '40px', background: '#F1F5F9', borderRadius: '12px' }} />
+          <div style={{ height: '40px', background: '#F1F5F9', borderRadius: '12px' }} />
+        </div>
+      )}
 
       {/* SALVA */}
       <button onClick={handleSave} disabled={loading}
