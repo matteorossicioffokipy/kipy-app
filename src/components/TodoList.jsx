@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle, Circle, Trash2, Plus, ChevronLeft, ChevronRight, Clock, Calendar } from 'lucide-react';
+import { CheckCircle, Circle, Trash2, Plus, Check, ChevronLeft, ChevronRight, Clock, Calendar } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 
 export default function TodoList({ supabase, user }) {
@@ -96,8 +96,8 @@ export default function TodoList({ supabase, user }) {
             <input type="time" value={nuovoOrario} onChange={(e) => setNuovoOrario(e.target.value)}
               style={{ border: '1px solid #E2E8F0', borderRadius: '8px', padding: '4px 8px', outline: 'none', color: '#64748B', background: 'white', fontFamily: "'Baloo 2', sans-serif", fontSize: '14px' }} />
           </div>
-          <button onClick={aggiungiTask} style={{ background: '#88C999', color: 'white', border: 'none', width: '42px', height: '42px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>
-            <Plus size={24} />
+          <button onClick={aggiungiTask} style={{ background: nuovoImpegno.trim() ? '#88C999' : 'transparent', color: nuovoImpegno.trim() ? 'white' : '#CBD5E1', border: nuovoImpegno.trim() ? 'none' : '2px solid #E2E8F0', width: '42px', height: '42px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: nuovoImpegno.trim() ? 'pointer' : 'default', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', transition: 'all 0.2s' }}>
+            {nuovoImpegno.trim() ? <Check size={22} /> : <Plus size={22} />}
           </button>
         </div>
       </div>
