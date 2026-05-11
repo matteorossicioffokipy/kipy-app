@@ -287,7 +287,11 @@ export default function App() {
             : <ProGate onUpgrade={handleUpgradePro} loading={loadingPro} />
         )}
 
-        {vista === 'FINANZE' && <Finanze supabase={supabase} user={user} />}
+        {vista === 'FINANZE' && (
+          isPro
+            ? <Finanze supabase={supabase} user={user} />
+            : <ProGate onUpgrade={handleUpgradePro} loading={loadingPro} />
+        )}
 
         {vista === 'IMPOSTAZIONI' && (
           <Impostazioni config={config} setConfig={setConfig} supabase={supabase} user={user} fetchDati={fetchDati} />
