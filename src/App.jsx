@@ -150,7 +150,7 @@ export default function App() {
   if (isResettingPassword) return <ResetPassword supabase={supabase} setIsResettingPassword={setIsResettingPassword} logo={logo} />;
 
   return (
-    <div style={{ minHeight: '100vh', backgroundImage: "url('/kipri-pattern.svg')", backgroundRepeat: 'repeat', backgroundSize: '200px auto', fontFamily: "'Baloo 2', sans-serif" }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#F1F5F9', fontFamily: "'Baloo 2', sans-serif" }}>
 
       {/* ── HEADER ── */}
       <div style={headerStyle}>
