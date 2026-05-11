@@ -1,6 +1,6 @@
 .app-wrapper {
   min-height: 100vh;
-  background-color: rgba(241, 245, 249, 0.97);
+  background-color: rgba(241, 245, 249, 0.70);
   background-image: url('/kipri-pattern.svg');
   background-repeat: repeat;
   background-size: 400px 400px;
