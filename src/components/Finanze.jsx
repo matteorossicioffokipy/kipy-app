@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Plus, TrendingUp, TrendingDown, Download, Trash2, Camera, X, Loader } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 import ModaleFinanza from './ModaleFinanza';
-import ProGate from './ProGate';
 
 export default function Finanze({ supabase, user, isPro }) {
   const { t, lang } = useLang();
@@ -132,7 +131,7 @@ export default function Finanze({ supabase, user, isPro }) {
     <tbody>${movimentiFiltrati.filter(m => m.tipo === 'entrata').map(m => `<tr><td>${new Date(m.data).toLocaleDateString('en-GB')}</td><td>${m.categoria}</td><td>${m.descrizione || '—'}</td><td style="text-align:right;" class="ie">+${currency}${parseFloat(m.importo).toFixed(2)}</td></tr>`).join('')}</tbody></table>
     <h2>${t('finanze_expenses')}</h2>
     <table><thead><tr><th>${lang === 'it' ? 'Data' : 'Date'}</th><th>${lang === 'it' ? 'Categoria' : 'Category'}</th><th>${lang === 'it' ? 'Descrizione' : 'Description'}</th><th style="text-align:right;">${lang === 'it' ? 'Importo' : 'Amount'}</th></tr></thead>
-    <tbody>${movimentiFiltrati.filter(m => m.tipo === 'uscita').map(m => `<tr><td>${new Date(m.data).toLocaleDateString('en-GB')}</td><td>${m.categoria}</td><td>${m.descrizione || '—'}</td><td style="text-align:right;" class="iu">-${currency}${parseFloat(m.importo).toFixed(2)}</td></tr>`).join('')}</tbody></table>
+    <tbody>${movimentiFiltrati.filter(m => m.tipo === 'uscita').map(m => `<tr><td>${new Date(m.data).toLocaleDateString('en-GB')}</td><td>${m.descrizione || '—'}</td><td style="text-align:right;" class="iu">-${currency}${parseFloat(m.importo).toFixed(2)}</td></tr>`).join('')}</tbody></table>
     <div class="foot">Generated with KIPRI · your business in your pocket</div>
     </body></html>`;
     const blob = new Blob([html], { type: 'text/html' });
@@ -152,12 +151,12 @@ export default function Finanze({ supabase, user, isPro }) {
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={scaricaReport} style={{ background: '#EEF8F2', color: '#15803D', border: 'none', width: '44px', height: '44px', borderRadius: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title={t('finanze_report')}><Download size={20} /></button>
-          {isPro ? (
-            <button onClick={() => { setMostraScanner(!mostraScanner); setScanStatus('idle'); setScanPreview(null); setDatiPrecompilati(null); }} style={{ background: mostraScanner ? '#5D5C9E' : '#EEEEF8', color: mostraScanner ? 'white' : '#5D5C9E', border: 'none', width: '44px', height: '44px', borderRadius: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Scanner scontrino"><Camera size={20} /></button>
-          ) : (
-            <ProGate feature="receipt_scanner">
-              <button style={{ background: '#EEEEF8', color: '#5D5C9E', border: 'none', width: '44px', height: '44px', borderRadius: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.6 }} title="Scanner scontrino (Pro)"><Camera size={20} /></button>
-            </ProGate>
+          {isPro && (
+            <button
+              onClick={() => { setMostraScanner(!mostraScanner); setScanStatus('idle'); setScanPreview(null); setDatiPrecompilati(null); }}
+              style={{ background: mostraScanner ? '#5D5C9E' : '#EEEEF8', color: mostraScanner ? 'white' : '#5D5C9E', border: 'none', width: '44px', height: '44px', borderRadius: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              title="Scanner scontrino"
+            ><Camera size={20} /></button>
           )}
           <button onClick={() => { setDatiPrecompilati(null); setMostraModale(true); }} style={addBtn}><Plus size={20} /></button>
         </div>
