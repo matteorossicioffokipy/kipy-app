@@ -32,6 +32,8 @@ export const translations = {
     dashboard_finanze_sub: 'Entrate e uscite',
     dashboard_impostazioni: 'Impostazioni',
     dashboard_statistiche: 'Statistiche',
+    dashboard_pagamentiQR: 'Pagamenti QR',
+    dashboard_pagamentiQR_sub: 'Incassa live',
     dashboard_statistiche_sub: 'Analisi e grafici',
     dashboard_impostazioni_sub: 'Profilo e preferenze',
 
@@ -209,6 +211,8 @@ export const translations = {
     dashboard_finanze_sub: 'Income & expenses',
     dashboard_impostazioni: 'Settings',
     dashboard_statistiche: 'Statistics',
+    dashboard_pagamentiQR: 'QR Payments',
+    dashboard_pagamentiQR_sub: 'Collect live',
     dashboard_statistiche_sub: 'Analytics & charts',
     dashboard_impostazioni_sub: 'Profile & preferences',
 

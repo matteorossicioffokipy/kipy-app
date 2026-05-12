@@ -19,6 +19,7 @@ import ModaleCliente from './components/ModaleCliente';
 import ModaleAppuntamento from './components/ModaleAppuntamento';
 import ProGate from './components/ProGate';
 import Statistiche from './components/Statistiche';
+import PagamentiQR from './components/PagamentiQR';
 
 export default function App() {
   const { lang, switchLang, t } = useLang();
@@ -294,7 +295,13 @@ export default function App() {
             : <ProGate onUpgrade={handleUpgradePro} loading={loadingPro} />
         )}
 
-        {vista === 'STATISTICHE' && (
+        {vista === 'PAGAMENTI_QR' && (
+          isPro
+            ? <PagamentiQR config={config} supabase={supabase} user={user} />
+            : <ProGate onUpgrade={handleUpgradePro} loading={loadingPro} />
+        )}
+
+        {vista === 'STATISTICHE' {vista === 'STATISTICHE' && ({vista === 'STATISTICHE' && ( (
           isPro
             ? <Statistiche supabase={supabase} user={user} clienti={clienti} appuntamenti={appuntamenti} />
             : <ProGate onUpgrade={handleUpgradePro} loading={loadingPro} />

@@ -18,7 +18,9 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
       promemoria_testo: config.promemoria_testo ?? '',
       iban: config.iban ?? '',
       nome_banca: config.nome_banca ?? '',
+      link_pagamento: config.link_pagamento ?? '',
       codice_fiscale: config.codice_fiscale ?? '',
+      link_pagamento: config.link_pagamento ?? '',
       formato_orario: config.formato_orario ?? '24h',
     }).eq('user_id', user.id);
     if (!error) {
@@ -262,6 +264,11 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
             value={config.nome_banca || ''}
             onChange={(e) => setConfig({ ...config, nome_banca: e.target.value })}
             placeholder={lang === 'it' ? 'Es: Banca Intesa, Revolut...' : 'E.g. Barclays, Revolut...'} />
+            <label style={{ ...labelStyle, marginTop: '10px' }}>{lang === 'it' ? 'Link pagamento (Revolut, PayPal, Monzo...)' : 'Payment link (Revolut, PayPal, Monzo...)'}</label>
+            <input style={inputStyle}
+              value={config.link_pagamento || ''}
+              onChange={(e) => setConfig({ ...config, link_pagamento: e.target.value })}
+              placeholder='https://revolut.me/tuonome' />
           <label style={{ ...labelStyle, marginTop: '10px' }}>{lang === 'it' ? 'P.IVA / Codice Fiscale' : 'VAT / Company number'}</label>
           <input style={inputStyle}
             value={config.codice_fiscale || ''}

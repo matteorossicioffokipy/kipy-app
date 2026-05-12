@@ -97,6 +97,14 @@ export default function Dashboard({ setView, config, appuntamenti }) {
           <span style={subLabelStyle}>{t('dashboard_finanze_sub')}</span>
         </div>
 
+        <div onClick={() => setView('PAGAMENTI_QR')} style={cardStyle}>
+          <div style={{ ...iconWrapStyle, background: '#FFF0F6' }}>
+            <QrCode color="#DB2777" size={28} />
+          </div>
+          <span style={labelStyle}>{t('dashboard_pagamentiQR')}</span>
+          <span style={subLabelStyle}>{t('dashboard_pagamentiQR_sub')}</span>
+        </div>
+
         <div onClick={() => setView('STATISTICHE')} style={cardStyle}>
           <div style={{ ...iconWrapStyle, background: '#F0F0FF' }}>
             <BarChart2 color="#5D5C9E" size={28} />
