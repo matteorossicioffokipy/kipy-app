@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, Calendar, CheckSquare, Settings, QrCode, FileText, TrendingUp } from 'lucide-react';
+import { Users, Calendar, CheckSquare, Settings, QrCode, FileText, TrendingUp, BarChart2 } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 
 export default function Dashboard({ setView, config, appuntamenti }) {
@@ -95,6 +95,14 @@ export default function Dashboard({ setView, config, appuntamenti }) {
           </div>
           <span style={labelStyle}>{t('dashboard_finanze')}</span>
           <span style={subLabelStyle}>{t('dashboard_finanze_sub')}</span>
+        </div>
+
+        <div onClick={() => setView('STATISTICHE')} style={cardStyle}>
+          <div style={{ ...iconWrapStyle, background: '#F0F0FF' }}>
+            <BarChart2 color="#5D5C9E" size={28} />
+          </div>
+          <span style={labelStyle}>{t('dashboard_statistiche')}</span>
+          <span style={subLabelStyle}>{t('dashboard_statistiche_sub')}</span>
         </div>
 
         <div onClick={() => setView('IMPOSTAZIONI')} style={{ ...cardStyle, gridColumn: 'span 2' }}>

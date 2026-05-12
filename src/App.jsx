@@ -18,6 +18,7 @@ import quokka from './assets/quokka.png';
 import ModaleCliente from './components/ModaleCliente';
 import ModaleAppuntamento from './components/ModaleAppuntamento';
 import ProGate from './components/ProGate';
+import Statistiche from './components/Statistiche';
 
 export default function App() {
   const { lang, switchLang, t } = useLang();
@@ -293,7 +294,13 @@ export default function App() {
             : <ProGate onUpgrade={handleUpgradePro} loading={loadingPro} />
         )}
 
-        {vista === 'IMPOSTAZIONI' && (
+        {vista === 'STATISTICHE' && (
+          isPro
+            ? <Statistiche supabase={supabase} user={user} clienti={clienti} appuntamenti={appuntamenti} />
+            : <ProGate onUpgrade={handleUpgradePro} loading={loadingPro} />
+        )}
+
+        {vista === 'IMPOSTAZIONI' {vista === 'IMPOSTAZIONI' && ({vista === 'IMPOSTAZIONI' && ( (
           <Impostazioni config={config} setConfig={setConfig} supabase={supabase} user={user} fetchDati={fetchDati} isPro={isPro} />
         )}
 

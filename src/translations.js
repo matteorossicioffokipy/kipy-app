@@ -31,6 +31,8 @@ export const translations = {
     dashboard_finanze: 'Finanze',
     dashboard_finanze_sub: 'Entrate e uscite',
     dashboard_impostazioni: 'Impostazioni',
+    dashboard_statistiche: 'Statistiche',
+    dashboard_statistiche_sub: 'Analisi e grafici',
     dashboard_impostazioni_sub: 'Profilo e preferenze',
 
     // RUBRICA
@@ -206,6 +208,8 @@ export const translations = {
     dashboard_finanze: 'Finance',
     dashboard_finanze_sub: 'Income & expenses',
     dashboard_impostazioni: 'Settings',
+    dashboard_statistiche: 'Statistics',
+    dashboard_statistiche_sub: 'Analytics & charts',
     dashboard_impostazioni_sub: 'Profile & preferences',
 
     // RUBRICA
