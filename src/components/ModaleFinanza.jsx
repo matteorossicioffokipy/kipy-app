@@ -4,10 +4,15 @@ import { useLang } from '../LanguageContext';
 const CAT_IT = { entrata: ['Servizio', 'Consulenza', 'Prodotto', 'Abbonamento', 'Altro'], uscita: ['Materiali', 'Affitto', 'Utenze', 'Marketing', 'Software', 'Trasporti', 'Altro'] };
 const CAT_EN = { entrata: ['Service', 'Consulting', 'Product', 'Subscription', 'Other'], uscita: ['Materials', 'Rent', 'Utilities', 'Marketing', 'Software', 'Transport', 'Other'] };
 
-export default function ModaleFinanza({ onSalva, onAnnulla }) {
+export default function ModaleFinanza({ onSalva, onAnnulla, datiIniziali }) {
   const { t, lang } = useLang();
-  const [tipo, setTipo] = useState('entrata');
-  const [form, setForm] = useState({ importo: '', categoria: '', descrizione: '', data: new Date().toLocaleDateString('en-CA') });
+  const [tipo, setTipo] = useState(datiIniziali?.tipo || 'entrata');
+  const [form, setForm] = useState({
+    importo: datiIniziali?.importo || '',
+    categoria: datiIniziali?.categoria || '',
+    descrizione: datiIniziali?.descrizione || '',
+    data: datiIniziali?.data || new Date().toLocaleDateString('en-CA'),
+  });
 
   const currency = lang === 'it' ? '€' : '£';
   const CAT = lang === 'en' ? CAT_EN : CAT_IT;

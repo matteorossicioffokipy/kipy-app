@@ -1,12 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, TrendingUp, TrendingDown, Download, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, TrendingUp, TrendingDown, Download, Trash2, Camera, X, Loader } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 import ModaleFinanza from './ModaleFinanza';
+import ProGate from './ProGate';
 
-export default function Finanze({ supabase, user }) {
+export default function Finanze({ supabase, user, isPro }) {
   const { t, lang } = useLang();
   const [movimenti, setMovimenti] = useState([]);
   const [mostraModale, setMostraModale] = useState(false);
+  const [mostraScanner, setMostraScanner] = useState(false);
+  const [scanStatus, setScanStatus] = useState('idle');
+  const [scanPreview, setScanPreview] = useState(null);
+  const [datiPrecompilati, setDatiPrecompilati] = useState(null);
+  const fileInputRef = useRef(null);
   const [meseSelezionato, setMeseSelezionato] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -36,7 +42,7 @@ export default function Finanze({ supabase, user }) {
       descrizione: formData.descrizione,
       data: formData.data,
     }]);
-    if (!error) { setMostraModale(false); fetchMovimenti(); }
+    if (!error) { setMostraModale(false); setDatiPrecompilati(null); fetchMovimenti(); }
     else alert(t('error') + ': ' + error.message);
   };
 
@@ -46,6 +52,57 @@ export default function Finanze({ supabase, user }) {
     fetchMovimenti();
   };
 
+  // --- SCANNER OCR ---
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setScanPreview(URL.createObjectURL(file));
+    setScanStatus('loading');
+    try {
+      const Tesseract = (await import('tesseract.js')).default;
+      const { data: { text } } = await Tesseract.recognize(file, 'ita+eng', {});
+      const risultato = parseReceiptText(text);
+      setDatiPrecompilati(risultato);
+      setScanStatus('done');
+    } catch (err) {
+      console.error(err);
+      setScanStatus('error');
+    }
+  };
+
+  const parseReceiptText = (text) => {
+    let importo = '';
+    const totaleMatch = text.match(/(?:totale|total|tot)[^\d]*(\d+[.,]\d{2})/i);
+    if (totaleMatch) {
+      importo = totaleMatch[1].replace(',', '.');
+    } else {
+      const numeri = [...text.matchAll(/\d+[.,]\d{2}/g)].map(m => parseFloat(m[0].replace(',', '.')));
+      if (numeri.length > 0) importo = String(Math.max(...numeri));
+    }
+    let data = new Date().toLocaleDateString('en-CA');
+    const dataMatch = text.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{2,4})/);
+    if (dataMatch) {
+      const [, g, m, a] = dataMatch;
+      const anno = a.length === 2 ? '20' + a : a;
+      data = `${anno}-${m.padStart(2,'0')}-${g.padStart(2,'0')}`;
+    }
+    return { importo, data, tipo: 'uscita', categoria: '', descrizione: '' };
+  };
+
+  const apriModaleDopoScan = () => {
+    setMostraScanner(false);
+    setMostraModale(true);
+  };
+
+  const resetScanner = () => {
+    setMostraScanner(false);
+    setScanStatus('idle');
+    setScanPreview(null);
+    setDatiPrecompilati(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // --- REPORT (invariato) ---
   const scaricaReport = () => {
     const [anno, mese] = meseSelezionato.split('-');
     const nomeMese = new Date(anno, parseInt(mese) - 1, 1)
@@ -95,9 +152,83 @@ export default function Finanze({ supabase, user }) {
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={scaricaReport} style={{ background: '#EEF8F2', color: '#15803D', border: 'none', width: '44px', height: '44px', borderRadius: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title={t('finanze_report')}><Download size={20} /></button>
-          <button onClick={() => setMostraModale(true)} style={addBtn}><Plus size={20} /></button>
+          {isPro ? (
+            <button onClick={() => { setMostraScanner(!mostraScanner); setScanStatus('idle'); setScanPreview(null); setDatiPrecompilati(null); }} style={{ background: mostraScanner ? '#5D5C9E' : '#EEEEF8', color: mostraScanner ? 'white' : '#5D5C9E', border: 'none', width: '44px', height: '44px', borderRadius: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Scanner scontrino"><Camera size={20} /></button>
+          ) : (
+            <ProGate feature="receipt_scanner">
+              <button style={{ background: '#EEEEF8', color: '#5D5C9E', border: 'none', width: '44px', height: '44px', borderRadius: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.6 }} title="Scanner scontrino (Pro)"><Camera size={20} /></button>
+            </ProGate>
+          )}
+          <button onClick={() => { setDatiPrecompilati(null); setMostraModale(true); }} style={addBtn}><Plus size={20} /></button>
         </div>
       </div>
+
+      {/* SCANNER PANEL */}
+      {mostraScanner && isPro && (
+        <div style={{ background: 'white', borderRadius: '20px', padding: '20px', marginBottom: '16px', boxShadow: '0 4px 20px rgba(93,92,158,0.12)', border: '2px solid #EEEEF8' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: '800', color: '#1E293B' }}>📷 {lang === 'it' ? 'Scanner Scontrino' : 'Receipt Scanner'}</div>
+              <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '2px' }}>{lang === 'it' ? 'Fotografa uno scontrino per aggiungere la spesa' : 'Scan a receipt to add the expense'}</div>
+            </div>
+            <button onClick={resetScanner} style={{ background: '#F1F5F9', border: 'none', borderRadius: '10px', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}><X size={16} /></button>
+          </div>
+
+          {scanStatus === 'idle' && (
+            <div>
+              <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleFileChange} style={{ display: 'none' }} id="receipt-upload" />
+              <label htmlFor="receipt-upload" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '28px', borderRadius: '14px', border: '2px dashed #C7C7E8', cursor: 'pointer', background: '#F8F8FF', color: '#5D5C9E' }}>
+                <Camera size={32} />
+                <span style={{ fontSize: '14px', fontWeight: '700' }}>{lang === 'it' ? 'Tocca per fotografare o caricare' : 'Tap to take photo or upload'}</span>
+                <span style={{ fontSize: '11px', color: '#94A3B8' }}>JPG, PNG, HEIC</span>
+              </label>
+            </div>
+          )}
+
+          {scanStatus === 'loading' && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '28px' }}>
+              {scanPreview && <img src={scanPreview} alt="preview" style={{ width: '100%', maxHeight: '160px', objectFit: 'contain', borderRadius: '10px' }} />}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#5D5C9E', fontWeight: '700', fontSize: '14px' }}>
+                <Loader size={18} style={{ animation: 'spin 1s linear infinite' }} />
+                {lang === 'it' ? 'Analisi in corso…' : 'Analysing receipt…'}
+              </div>
+              <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+            </div>
+          )}
+
+          {scanStatus === 'done' && datiPrecompilati && (
+            <div>
+              {scanPreview && <img src={scanPreview} alt="preview" style={{ width: '100%', maxHeight: '140px', objectFit: 'contain', borderRadius: '10px', marginBottom: '12px' }} />}
+              <div style={{ background: '#F8F8FF', borderRadius: '12px', padding: '14px', marginBottom: '14px' }}>
+                <div style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>{lang === 'it' ? 'Dati rilevati' : 'Detected data'}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '22px', fontWeight: '900', color: '#EF4444' }}>{datiPrecompilati.importo ? `${currency}${parseFloat(datiPrecompilati.importo).toFixed(2)}` : (lang === 'it' ? 'Non trovato' : 'Not found')}</div>
+                    <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '2px' }}>{datiPrecompilati.data}</div>
+                  </div>
+                  <span style={{ fontSize: '28px' }}>🧾</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={resetScanner} style={{ flex: 1, background: '#F1F5F9', color: '#64748B', border: 'none', padding: '12px', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: "'Baloo 2', sans-serif", fontSize: '14px' }}>
+                  {lang === 'it' ? 'Riprova' : 'Retry'}
+                </button>
+                <button onClick={apriModaleDopoScan} style={{ flex: 2, background: '#EF4444', color: 'white', border: 'none', padding: '12px', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', fontFamily: "'Baloo 2', sans-serif", fontSize: '14px' }}>
+                  {lang === 'it' ? '➕ Aggiungi spesa' : '➕ Add expense'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {scanStatus === 'error' && (
+            <div style={{ textAlign: 'center', padding: '20px' }}>
+              <div style={{ fontSize: '32px', marginBottom: '8px' }}>❌</div>
+              <div style={{ fontSize: '14px', fontWeight: '700', color: '#EF4444', marginBottom: '12px' }}>{lang === 'it' ? "Errore nella lettura. Riprova con un'immagine più nitida." : 'Could not read receipt. Try a clearer image.'}</div>
+              <button onClick={resetScanner} style={{ background: '#F1F5F9', color: '#64748B', border: 'none', padding: '10px 20px', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: "'Baloo 2', sans-serif" }}>{lang === 'it' ? 'Riprova' : 'Retry'}</button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* FILTRO MESE */}
       <div style={{ marginBottom: '16px' }}>
@@ -157,7 +288,8 @@ export default function Finanze({ supabase, user }) {
       {mostraModale && (
         <ModaleFinanza
           onSalva={handleSalva}
-          onAnnulla={() => setMostraModale(false)}
+          onAnnulla={() => { setMostraModale(false); setDatiPrecompilati(null); }}
+          datiIniziali={datiPrecompilati}
         />
       )}
     </div>
