@@ -300,7 +300,7 @@ export default function App() {
             : <ProGate onUpgrade={handleUpgradePro} loading={loadingPro} />
         )}
 
-        {vista === 'IMPOSTAZIONI' {vista === 'IMPOSTAZIONI' && ({vista === 'IMPOSTAZIONI' && ( (
+        {vista === 'IMPOSTAZIONI' && (
           <Impostazioni config={config} setConfig={setConfig} supabase={supabase} user={user} fetchDati={fetchDati} isPro={isPro} />
         )}
 
