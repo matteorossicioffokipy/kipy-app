@@ -291,7 +291,7 @@ export default function App() {
 
         {vista === 'FINANZE' && (
           isPro
-            ? <Finanze supabase={supabase} user={user} />
+            ? <Finanze supabase={supabase} user={user} isPro={isPro} />
             : <ProGate onUpgrade={handleUpgradePro} loading={loadingPro} />
         )}
 
