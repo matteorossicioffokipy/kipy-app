@@ -301,7 +301,7 @@ export default function App() {
             : <ProGate onUpgrade={handleUpgradePro} loading={loadingPro} />
         )}
 
-        {vista === 'STATISTICHE' {vista === 'STATISTICHE' && ({vista === 'STATISTICHE' && ( (
+        {vista === 'STATISTICHE' && (
           isPro
             ? <Statistiche supabase={supabase} user={user} clienti={clienti} appuntamenti={appuntamenti} />
             : <ProGate onUpgrade={handleUpgradePro} loading={loadingPro} />
