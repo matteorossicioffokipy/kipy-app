@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useLang } from '../LanguageContext';
-import { CheckCircle, Link, QrCode } from 'lucide-react';
+import { CheckCircle, Link, QrCode, CreditCard } from 'lucide-react';
 
 export default function PagamentiQR({ config, supabase, user }) {
   const { lang } = useLang();
@@ -12,12 +12,19 @@ export default function PagamentiQR({ config, supabase, user }) {
   const t = (it, en) => lang === 'it' ? it : en;
   const currency = lang === 'it' ? '€' : '£';
 
-  const linkBase = config?.link_pagamento || '';
-  const linkConImporto = importo
-    ? `${linkBase}${linkBase.includes('?') ? '&' : '?'}amount=${importo}`
-    : linkBase;
+  // Raccoglie tutti i metodi di pagamento configurati
+  const metodi = [
+    { label: config?.label_pagamento_1 || 'Revolut / PayPal', link: config?.link_pagamento || '' },
+    { label: config?.label_pagamento_2 || '', link: config?.link_pagamento_2 || '' },
+    { label: config?.label_pagamento_3 || '', link: config?.link_pagamento_3 || '' },
+  ].filter(m => m.link.trim().length > 0);
 
-  const hasLink = linkBase.trim().length > 0;
+  const linkPrincipale = metodi.length > 0 ? metodi[0].link : '';
+  const linkConImporto = importo && linkPrincipale
+    ? `${linkPrincipale}${linkPrincipale.includes('?') ? '&' : '?'}amount=${importo}`
+    : linkPrincipale;
+
+  const hasMetodi = metodi.length > 0;
 
   const registraIncasso = async () => {
     if (!importo || parseFloat(importo) <= 0) return;
@@ -37,6 +44,17 @@ export default function PagamentiQR({ config, supabase, user }) {
     }, 2500);
   };
 
+  // Emoji per i metodi più comuni
+  const getEmoji = (label) => {
+    const l = label.toLowerCase();
+    if (l.includes('revolut')) return '🟣';
+    if (l.includes('paypal')) return '🔵';
+    if (l.includes('monzo')) return '🟠';
+    if (l.includes('sumup')) return '🟢';
+    if (l.includes('stripe')) return '🔷';
+    return '💳';
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: "'Baloo 2', sans-serif" }}>
 
@@ -44,16 +62,16 @@ export default function PagamentiQR({ config, supabase, user }) {
         {t('Pagamenti QR', 'QR Payments')}
       </h2>
 
-      {/* AVVISO SE NON HA LINK */}
-      {!hasLink && (
+      {/* AVVISO SE NON HA METODI */}
+      {!hasMetodi && (
         <div style={{ background: '#FFFBEB', borderRadius: '16px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid #FDE68A' }}>
           <Link size={20} color="#D97706" />
           <div>
             <div style={{ fontSize: '14px', fontWeight: '700', color: '#92400E' }}>
-              {t('Aggiungi il tuo link di pagamento', 'Add your payment link')}
+              {t('Aggiungi un metodo di pagamento', 'Add a payment method')}
             </div>
             <div style={{ fontSize: '12px', color: '#B45309', marginTop: '2px' }}>
-              {t('Vai su Impostazioni → Coordinate bancarie → Link pagamento', 'Go to Settings → Payment details → Payment link')}
+              {t('Vai su Impostazioni → Metodi di pagamento rapido', 'Go to Settings → Quick payment methods')}
             </div>
           </div>
         </div>
@@ -87,14 +105,14 @@ export default function PagamentiQR({ config, supabase, user }) {
       </div>
 
       {/* QR CODE */}
-      {hasLink && (
+      {hasMetodi && (
         <div style={{ ...sectionStyle, alignItems: 'center', textAlign: 'center' }}>
           <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '16px', fontWeight: '600' }}>
             {t('Mostra questo QR al cliente', 'Show this QR to your client')}
           </div>
           <div style={{ background: 'white', borderRadius: '24px', padding: '24px', boxShadow: '0 4px 24px rgba(93,92,158,0.15)', border: '2px solid #EEEEF8', display: 'inline-block' }}>
             <QRCodeSVG
-              value={linkConImporto}
+              value={linkConImporto || linkPrincipale}
               size={200}
               fgColor="#5D5C9E"
               level="H"
@@ -108,8 +126,39 @@ export default function PagamentiQR({ config, supabase, user }) {
           {descrizione && (
             <div style={{ fontSize: '14px', color: '#64748B', marginTop: '4px' }}>{descrizione}</div>
           )}
-          <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '8px' }}>
-            {linkBase}
+
+          {/* METODI DI PAGAMENTO */}
+          <div style={{ width: '100%', marginTop: '20px' }}>
+            <div style={{ fontSize: '12px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
+              {t('Metodi accettati', 'Accepted methods')}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {metodi.map((m, i) => (
+                <a
+                  key={i}
+                  href={importo && parseFloat(importo) > 0
+                    ? `${m.link}${m.link.includes('?') ? '&' : '?'}amount=${importo}`
+                    : m.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '14px 16px', borderRadius: '14px',
+                    background: i === 0 ? 'linear-gradient(135deg, #5D5C9E 0%, #3d3b7a 100%)' : '#F8F9FF',
+                    color: i === 0 ? 'white' : '#1E293B',
+                    textDecoration: 'none', fontWeight: '700', fontSize: '14px',
+                    border: i === 0 ? 'none' : '1.5px solid #EEEEF8',
+                    boxShadow: i === 0 ? '0 4px 14px rgba(93,92,158,0.3)' : 'none',
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '20px' }}>{getEmoji(m.label)}</span>
+                    <span>{m.label || `Link ${i + 1}`}</span>
+                  </span>
+                  <span style={{ fontSize: '12px', opacity: 0.7 }}>→</span>
+                </a>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -141,7 +190,7 @@ export default function PagamentiQR({ config, supabase, user }) {
           {[
             t('Inserisci l\'importo da richiedere', 'Enter the amount to request'),
             t('Mostra il QR al cliente — lo scansiona con la fotocamera', 'Show the QR to your client — they scan it with their camera'),
-            t('Il cliente paga direttamente su Revolut, PayPal o Monzo', 'Client pays directly via Revolut, PayPal or Monzo'),
+            t('Il cliente sceglie il metodo e paga direttamente', 'Client chooses their preferred method and pays directly'),
             t('Clicca "Registra incasso" per aggiornare le tue Finanze', 'Tap "Record payment" to update your Finances'),
           ].map((step, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>

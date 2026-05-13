@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Save, Upload, Check, MessageCircle, Building2, Image, Zap, Crown, Clock, Lock } from 'lucide-react';
+import { Save, Upload, Check, MessageCircle, Building2, Image, Zap, Crown, Clock, Lock, CreditCard } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 
 export default function Impostazioni({ config, setConfig, supabase, user, fetchDati, isPro }) {
@@ -20,8 +20,12 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
       nome_banca: config.nome_banca ?? '',
       link_pagamento: config.link_pagamento ?? '',
       codice_fiscale: config.codice_fiscale ?? '',
-      link_pagamento: config.link_pagamento ?? '',
       formato_orario: config.formato_orario ?? '24h',
+      label_pagamento_1: config.label_pagamento_1 ?? '',
+      link_pagamento_2: config.link_pagamento_2 ?? '',
+      label_pagamento_2: config.label_pagamento_2 ?? '',
+      link_pagamento_3: config.link_pagamento_3 ?? '',
+      label_pagamento_3: config.label_pagamento_3 ?? '',
     }).eq('user_id', user.id);
     if (!error) {
       setSalvato(true);
@@ -76,6 +80,12 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
   const testoPreview = (config.promemoria_testo && config.promemoria_testo !== 'null' && config.promemoria_testo !== 'NULL')
     ? config.promemoria_testo
     : testoDefault;
+
+  const metodiPagamento = [
+    { link: config.link_pagamento || '', label: config.label_pagamento_1 || '', linkKey: 'link_pagamento', labelKey: 'label_pagamento_1', placeholder: 'https://revolut.me/tuonome', labelPlaceholder: lang === 'it' ? 'Es: Revolut' : 'E.g: Revolut' },
+    { link: config.link_pagamento_2 || '', label: config.label_pagamento_2 || '', linkKey: 'link_pagamento_2', labelKey: 'label_pagamento_2', placeholder: 'https://paypal.me/tuonome', labelPlaceholder: lang === 'it' ? 'Es: PayPal' : 'E.g: PayPal' },
+    { link: config.link_pagamento_3 || '', label: config.label_pagamento_3 || '', linkKey: 'link_pagamento_3', labelKey: 'label_pagamento_3', placeholder: 'https://monzo.me/tuonome', labelPlaceholder: lang === 'it' ? 'Es: Monzo' : 'E.g: Monzo' },
+  ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: "'Baloo 2', sans-serif" }}>
@@ -252,8 +262,11 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
         <div style={sectionStyle}>
           <div style={sectionTitleStyle}>
             <div style={sectionIconStyle('#EEEEF8')}><span style={{ fontSize: '14px' }}>🏦</span></div>
-            {lang === 'it' ? 'Coordinate bancarie' : 'Payment details'}
+            {lang === 'it' ? 'Coordinate bancarie' : 'Bank details'}
           </div>
+          <p style={{ fontSize: '12px', color: '#94A3B8', margin: '0' }}>
+            {lang === 'it' ? 'Appaiono automaticamente sulle fatture emesse.' : 'Shown automatically on issued invoices.'}
+          </p>
           <label style={labelStyle}>IBAN</label>
           <input style={inputStyle}
             value={config.iban || ''}
@@ -264,19 +277,11 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
             value={config.nome_banca || ''}
             onChange={(e) => setConfig({ ...config, nome_banca: e.target.value })}
             placeholder={lang === 'it' ? 'Es: Banca Intesa, Revolut...' : 'E.g. Barclays, Revolut...'} />
-            <label style={{ ...labelStyle, marginTop: '10px' }}>{lang === 'it' ? 'Link pagamento (Revolut, PayPal, Monzo...)' : 'Payment link (Revolut, PayPal, Monzo...)'}</label>
-            <input style={inputStyle}
-              value={config.link_pagamento || ''}
-              onChange={(e) => setConfig({ ...config, link_pagamento: e.target.value })}
-              placeholder='https://revolut.me/tuonome' />
           <label style={{ ...labelStyle, marginTop: '10px' }}>{lang === 'it' ? 'P.IVA / Codice Fiscale' : 'VAT / Company number'}</label>
           <input style={inputStyle}
             value={config.codice_fiscale || ''}
             onChange={(e) => setConfig({ ...config, codice_fiscale: e.target.value })}
             placeholder={lang === 'it' ? 'Es: IT12345678901' : 'E.g: GB123456789'} />
-          <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>
-            {lang === 'it' ? 'Apparirà automaticamente sulle fatture emesse.' : 'Will appear automatically on issued invoices.'}
-          </p>
         </div>
       ) : (
         <div style={{ ...sectionStyle, opacity: 0.7, position: 'relative', overflow: 'hidden' }}>
@@ -293,9 +298,57 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
           </div>
           <div style={sectionTitleStyle}>
             <div style={sectionIconStyle('#EEEEF8')}><span style={{ fontSize: '14px' }}>🏦</span></div>
-            {lang === 'it' ? 'Coordinate bancarie' : 'Payment details'}
+            {lang === 'it' ? 'Coordinate bancarie' : 'Bank details'}
           </div>
           <div style={{ height: '40px', background: '#F1F5F9', borderRadius: '12px' }} />
+          <div style={{ height: '40px', background: '#F1F5F9', borderRadius: '12px' }} />
+          <div style={{ height: '40px', background: '#F1F5F9', borderRadius: '12px' }} />
+        </div>
+      )}
+
+      {/* METODI DI PAGAMENTO RAPIDO — solo Pro */}
+      {isPro ? (
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>
+            <div style={sectionIconStyle('#EEEEF8')}><CreditCard size={16} color="#5D5C9E" /></div>
+            {lang === 'it' ? 'Metodi di pagamento rapido' : 'Quick payment methods'}
+          </div>
+          <p style={{ fontSize: '12px', color: '#94A3B8', margin: '0' }}>
+            {lang === 'it' ? 'Aggiungi fino a 3 link per ricevere pagamenti (Revolut, PayPal, Monzo…). Verranno usati per generare il QR.' : 'Add up to 3 payment links (Revolut, PayPal, Monzo…). Used to generate your payment QR.'}
+          </p>
+          {metodiPagamento.map((m, i) => (
+            <div key={i} style={{ background: '#F8F9FF', borderRadius: '14px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px', marginTop: i === 0 ? '4px' : '0' }}>
+              <div style={{ fontSize: '12px', fontWeight: '800', color: '#5D5C9E' }}>
+                {lang === 'it' ? `Metodo ${i + 1}` : `Method ${i + 1}`}
+              </div>
+              <input style={inputStyle}
+                value={m.label}
+                onChange={(e) => setConfig({ ...config, [m.labelKey]: e.target.value })}
+                placeholder={m.labelPlaceholder} />
+              <input style={inputStyle}
+                value={m.link}
+                onChange={(e) => setConfig({ ...config, [m.linkKey]: e.target.value })}
+                placeholder={m.placeholder} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ ...sectionStyle, opacity: 0.7, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(255,255,255,0.7)', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '20px' }}>
+            <div style={{ textAlign: 'center', padding: '20px' }}>
+              <Lock size={24} color="#5D5C9E" style={{ marginBottom: '8px' }} />
+              <div style={{ fontSize: '13px', fontWeight: '800', color: '#5D5C9E' }}>
+                {lang === 'it' ? 'Disponibile con Pro' : 'Available with Pro'}
+              </div>
+              <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>
+                {lang === 'it' ? 'Revolut, PayPal, Monzo e altro' : 'Revolut, PayPal, Monzo and more'}
+              </div>
+            </div>
+          </div>
+          <div style={sectionTitleStyle}>
+            <div style={sectionIconStyle('#EEEEF8')}><CreditCard size={16} color="#5D5C9E" /></div>
+            {lang === 'it' ? 'Metodi di pagamento rapido' : 'Quick payment methods'}
+          </div>
           <div style={{ height: '40px', background: '#F1F5F9', borderRadius: '12px' }} />
           <div style={{ height: '40px', background: '#F1F5F9', borderRadius: '12px' }} />
         </div>
