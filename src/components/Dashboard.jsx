@@ -25,7 +25,7 @@ export default function Dashboard({ setView, config, appuntamenti, supabase, use
   // Unisce appuntamenti + todo, ordina per orario
   const impegniOggi = [
     ...appOggi.map(a => ({ id: a.id, testo: a.titolo, orario: a.ora, isAppuntamento: true })),
-    ...todosOggi.map(t => ({ id: t.id, testo: t.testo, orario: t.orario, isAppuntamento: false })),
+    ...todosOggi.map(todo => ({ id: todo.id, testo: todo.testo, orario: todo.orario, isAppuntamento: false })),
   ].sort((a, b) => (a.orario || '99:99').localeCompare(b.orario || '99:99')).slice(0, 4);
 
   return (
