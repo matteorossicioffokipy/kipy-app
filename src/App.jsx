@@ -257,7 +257,7 @@ export default function App() {
         )}
 
         {/* ── VISTE ── */}
-        {vista === 'DASHBOARD' && <Dashboard setView={setVista} config={config} appuntamenti={appuntamenti} />}
+        {vista === 'DASHBOARD' && <Dashboard setView={setVista} config={config} appuntamenti={appuntamenti} supabase={supabase} user={user} />}
 
         {vista === 'RUBRICA' && (
           <Rubrica

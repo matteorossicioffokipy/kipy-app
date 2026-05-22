@@ -1,45 +1,71 @@
-import React from 'react';
-import { Users, Calendar, CheckSquare, Settings, QrCode, FileText, TrendingUp, BarChart2, Banknote } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Users, Calendar, CheckSquare, Settings, QrCode, FileText, TrendingUp, BarChart2, Banknote, Clock } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 
-export default function Dashboard({ setView, config, appuntamenti }) {
+export default function Dashboard({ setView, config, appuntamenti, supabase, user }) {
   const { t } = useLang();
+  const [todosOggi, setTodosOggi] = useState([]);
 
   const oggi = new Date().toLocaleDateString('en-CA');
+
   const appOggi = (appuntamenti || [])
     .filter(a => a.data === oggi)
     .sort((a, b) => a.ora.localeCompare(b.ora))
     .slice(0, 3);
 
+  useEffect(() => {
+    if (!supabase || !user) return;
+    supabase.from('todo').select('*')
+      .eq('user_id', user.id)
+      .eq('data_scadenza', oggi)
+      .eq('completato', false)
+      .then(({ data }) => setTodosOggi(data || []));
+  }, [user]);
+
+  // Unisce appuntamenti + todo, ordina per orario
+  const impegniOggi = [
+    ...appOggi.map(a => ({ id: a.id, testo: a.titolo, orario: a.ora, isAppuntamento: true })),
+    ...todosOggi.map(t => ({ id: t.id, testo: t.testo, orario: t.orario, isAppuntamento: false })),
+  ].sort((a, b) => (a.orario || '99:99').localeCompare(b.orario || '99:99')).slice(0, 4);
+
   return (
     <div style={{ fontFamily: "'Baloo 2', sans-serif" }}>
 
-      {/* CARD APPUNTAMENTI OGGI */}
-      {appOggi.length > 0 && (
-        <div style={todayCardStyle} onClick={() => setView('CALENDARIO')}>
+      {/* CARD IMPEGNI OGGI */}
+      {impegniOggi.length > 0 && (
+        <div style={todayCardStyle}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <span style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '1px' }}>
               {t('dashboard_today')}
             </span>
-            <span style={{ fontSize: '11px', color: '#5D5C9E', fontWeight: '600' }}>
-              {t('dashboard_seeAll')}
-            </span>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <span onClick={() => setView('CALENDARIO')} style={{ fontSize: '11px', color: '#5D5C9E', fontWeight: '600', cursor: 'pointer' }}>📅</span>
+              <span onClick={() => setView('TODO')} style={{ fontSize: '11px', color: '#22C55E', fontWeight: '600', cursor: 'pointer' }}>✅</span>
+            </div>
           </div>
-          {appOggi.map((app, i) => (
-            <div key={app.id} style={{
+          {impegniOggi.map((item, i) => (
+            <div key={item.id} style={{
               display: 'flex', alignItems: 'center', gap: '10px',
               padding: '8px 0',
-              borderBottom: i < appOggi.length - 1 ? '1px solid #F1F5F9' : 'none'
-            }}>
+              borderBottom: i < impegniOggi.length - 1 ? '1px solid #F1F5F9' : 'none',
+              cursor: 'pointer',
+            }}
+              onClick={() => setView(item.isAppuntamento ? 'CALENDARIO' : 'TODO')}
+            >
               <div style={{
                 width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
-                background: i === 0 ? '#5D5C9E' : i === 1 ? '#70C18E' : '#FFB347'
+                background: item.isAppuntamento ? '#5D5C9E' : '#22C55E'
               }} />
               <span style={{ flex: 1, fontSize: '13px', fontWeight: '700', color: '#1E293B' }}>
-                {app.titolo}
+                {item.testo}
               </span>
-              <span style={{ fontSize: '12px', color: '#94A3B8' }}>
-                {app.ora?.slice(0, 5)}
+              {item.orario && (
+                <span style={{ fontSize: '12px', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <Clock size={11} />{item.orario?.slice(0, 5)}
+                </span>
+              )}
+              <span style={{ fontSize: '10px', color: item.isAppuntamento ? '#5D5C9E' : '#22C55E', fontWeight: '700' }}>
+                {item.isAppuntamento ? '📅' : '✓'}
               </span>
             </div>
           ))}
@@ -132,7 +158,6 @@ const todayCardStyle = {
   padding: '16px',
   boxShadow: '0 2px 12px rgba(93,92,158,0.08)',
   border: '1px solid rgba(93,92,158,0.1)',
-  cursor: 'pointer',
 };
 const cardStyle = {
   background: 'white',
