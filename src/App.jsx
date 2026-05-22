@@ -275,7 +275,7 @@ export default function App() {
         )}
 
         {vista === 'CALENDARIO' && (
-          <Calendario appuntamenti={appuntamenti} setMostraModuloApp={setMostraModuloApp}
+          <Calendario appuntamenti={appuntamenti} setMostraModuloApp={setMostraModuloApp} mostraModuloApp={mostraModuloApp}
             supabase={supabase} fetchDati={fetchDati} config={config} clienti={clienti} onConferma={confermaAppuntamento} />
         )}
 

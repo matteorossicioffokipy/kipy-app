@@ -4,7 +4,7 @@ import { useLang } from '../LanguageContext';
 import ModaleAppuntamento from './ModaleAppuntamento';
 import { formatOra } from '../utils/timeFormat';
 
-export default function Calendario({ appuntamenti, setMostraModuloApp, supabase, fetchDati, config, clienti, onConferma }) {
+export default function Calendario({ appuntamenti, setMostraModuloApp, mostraModuloApp, supabase, fetchDati, config, clienti, onConferma }) {
   const { t, lang } = useLang();
   const oggiCorretto = new Date().toLocaleDateString('en-CA');
   const [dataSelezionata, setDataSelezionata] = useState(oggiCorretto);
@@ -376,7 +376,7 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, supabase,
       </div>
 
       {/* FAB */}
-      <button onClick={() => setMostraModuloApp(true)} style={{ position: 'fixed', bottom: '30px', right: '20px', width: '64px', height: '64px', borderRadius: '20px', background: orangeKipy, color: 'white', border: 'none', boxShadow: `0 10px 20px ${orangeKipy}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation', cursor: 'pointer' }}>
+      <button onClick={() => setMostraModuloApp(true)} style={{ position: 'fixed', bottom: '30px', right: '20px', width: '64px', height: '64px', borderRadius: '20px', background: orangeKipy, color: 'white', border: 'none', boxShadow: `0 10px 20px ${orangeKipy}40`, display: mostraModuloApp ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation', cursor: 'pointer' }}>
         <Plus size={28} />
       </button>
 
