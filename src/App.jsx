@@ -88,15 +88,18 @@ export default function App() {
       a.importo && !a.completato && a.data < oggi
     );
     for (const app of daIncassare) {
-      await supabase.from('movimenti').insert([{
-        user_id: user.id,
-        tipo: 'entrata',
-        importo: parseFloat(app.importo),
-        categoria: app.categoria || 'Appuntamento',
-        descrizione: app.titolo,
-        data: app.data,
-      }]);
-      await supabase.from('appuntamenti').update({ completato: true }).eq('id', app.id);
+      const { error: errUpdate } = await supabase
+        .from('appuntamenti').update({ completato: true }).eq('id', app.id).eq('completato', false);
+      if (!errUpdate) {
+        await supabase.from('movimenti').insert([{
+          user_id: user.id,
+          tipo: 'entrata',
+          importo: parseFloat(app.importo),
+          categoria: app.categoria || 'Appuntamento',
+          descrizione: app.titolo,
+          data: app.data,
+        }]);
+      }
     }
   };
 
