@@ -14,7 +14,7 @@ import { Home, LogOut, Settings } from 'lucide-react';
 import { useLang } from './LanguageContext';
 import './app.css';
 import logo from './assets/logo.png';
-import quokka from './assets/quokka.png';
+import mascot from './assets/mascot.svg';
 import ModaleCliente from './components/ModaleCliente';
 import ModaleAppuntamento from './components/ModaleAppuntamento';
 import ProGate from './components/ProGate';
@@ -212,7 +212,7 @@ export default function App() {
             onClick={() => setVista('IMPOSTAZIONI')}
             title="Apri Impostazioni"
           >
-            <img src={quokka} alt=""
+            <img src={mascot} alt=""
               style={{ position: 'absolute', bottom: '-8px', right: '12px', height: '90px', width: 'auto', zIndex: 2, filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.2))' }}
               onError={e => { e.target.style.display = 'none'; }}
             />
