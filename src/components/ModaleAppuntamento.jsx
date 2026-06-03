@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLang } from '../LanguageContext';
 import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 
@@ -10,6 +10,11 @@ const COLORI_PRESET = [
 export default function ModaleAppuntamento({ formApp, setFormApp, onSalva, onAnnulla, isEdit }) {
   const { t, lang } = useLang();
   const [mostraNoteDettagliate, setMostraNoteDettagliate] = useState(!!(formApp.note_dettagliate));
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
 
   // Date extra — solo per nuovi appuntamenti (non modifica)
   const [dateExtra, setDateExtra] = useState([]);
@@ -36,7 +41,7 @@ export default function ModaleAppuntamento({ formApp, setFormApp, onSalva, onAnn
   return (
     <div
       onClick={(e) => { if (e.target === e.currentTarget) onAnnulla(); }}
-      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px', boxSizing: 'border-box' }}
+      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px', boxSizing: 'border-box', overscrollBehavior: 'contain' }}
     >
       <div style={{ background: 'white', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '380px', boxSizing: 'border-box', boxShadow: '0 20px 60px rgba(0,0,0,0.18)', maxHeight: '90vh', overflowY: 'auto' }}>
 
