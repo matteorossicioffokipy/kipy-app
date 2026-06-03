@@ -283,25 +283,12 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
             value={config.codice_fiscale || ''}
             onChange={(e) => setConfig({ ...config, codice_fiscale: e.target.value })}
             placeholder={lang === 'it' ? 'Es: IT12345678901' : 'E.g: GB123456789'} />
-        </div>
-
-      {isPro && (
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>
-            <div style={sectionIconStyle('#EEEEF8')}><span style={{ fontSize: '14px' }}>✍️</span></div>
-            {lang === 'it' ? 'Firma fatture' : 'Invoice signature'}
-          </div>
-          <p style={{ fontSize: '12px', color: '#94A3B8', margin: '0' }}>
-            {lang === 'it' ? 'Appare in corsivo in fondo alle fatture emesse.' : 'Appears in cursive at the bottom of issued invoices.'}
-          </p>
-          <label style={labelStyle}>{lang === 'it' ? 'Il tuo nome / firma' : 'Your name / signature'}</label>
+          <label style={{ ...labelStyle, marginTop: '10px' }}>{lang === 'it' ? 'Firma (sulle fatture)' : 'Signature (on invoices)'}</label>
           <input style={inputStyle}
             value={config.firma || ''}
             onChange={(e) => setConfig({ ...config, firma: e.target.value })}
             placeholder={lang === 'it' ? 'Es: Mario Rossi' : 'E.g: John Smith'} />
         </div>
-      )}
-
       ) : (
         <div style={{ ...sectionStyle, opacity: 0.7, position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(255,255,255,0.7)', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '20px' }}>
