@@ -315,6 +315,35 @@ export default function Fatture({ supabase, user, clienti, config }) {
     setScaricando(false);
   };
 
+  const scaricaImmagineA4 = async (fattura) => {
+    setMostraMenu(false);
+    setScaricando(true);
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      const html = generaHTML(fattura, lang);
+      const container = document.createElement('div');
+      container.style.cssText = 'position:fixed;top:-9999px;left:0;width:794px;background:white;z-index:-1;';
+      container.innerHTML = html;
+      document.body.appendChild(container);
+      await new Promise(r => setTimeout(r, 800));
+      const page = container.querySelector('.page') || container;
+      // A4 ratio: 794 x 1123px
+      const canvas = await html2canvas(page, {
+        scale: 2, useCORS: true, backgroundColor: '#ffffff',
+        width: 794, height: 1123, windowWidth: 794,
+      });
+      document.body.removeChild(container);
+      const link = document.createElement('a');
+      link.download = `fattura-${fattura.numero}.jpg`;
+      link.href = canvas.toDataURL('image/jpeg', 0.95);
+      link.click();
+    } catch (err) {
+      console.error(err);
+      alert(lang === 'it' ? 'Errore. Riprova.' : 'Error. Please try again.');
+    }
+    setScaricando(false);
+  };
+
   const inviaWhatsApp = (fattura) => {
     const cliente = clienti.find(c => c.id === fattura.cliente_id);
     const tel = cliente?.tel?.replace(/\D/g, '');
@@ -358,11 +387,11 @@ export default function Fatture({ supabase, user, clienti, config }) {
             )}
             {mostraMenu && (
               <div style={{ position: 'absolute', right: 0, top: '52px', background: 'white', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', border: '1px solid #F1F5F9', zIndex: 100, minWidth: '180px', overflow: 'hidden' }}>
-                <button onClick={() => { setMostraMenu(false); scaricaPDF(fatturaAperta); }} style={menuItemStyle}>
+                <button onClick={() => scaricaPDF(fatturaAperta)} style={menuItemStyle}>
                   <Download size={16} color="#15803D" /> <span>{lang === 'it' ? 'Scarica PDF' : 'Download PDF'}</span>
                 </button>
-                <button onClick={() => scaricaImmagine(fatturaAperta)} style={menuItemStyle}>
-                  <FileText size={16} color="#5D5C9E" /> <span>{lang === 'it' ? 'Salva come immagine' : 'Save as image'}</span>
+                <button onClick={() => scaricaImmagineA4(fatturaAperta)} style={menuItemStyle}>
+                  <FileText size={16} color="#5D5C9E" /> <span>{lang === 'it' ? 'Salva come immagine A4' : 'Save as A4 image'}</span>
                 </button>
                 <button onClick={() => { setMostraMenu(false); inviaWhatsApp(fatturaAperta); }} style={menuItemStyle}>
                   <MessageCircle size={16} color="#22C55E" /> <span>WhatsApp</span>
@@ -417,9 +446,6 @@ export default function Fatture({ supabase, user, clienti, config }) {
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
                     <span style={{ fontSize: '18px', fontWeight: '800', color: '#5D5C9E' }}>{currency}{parseFloat(f.totale).toFixed(2)}</span>
                     <div style={{ display: 'flex', gap: '6px' }} onClick={e => e.stopPropagation()}>
-                      <button onClick={() => scaricaPDF(f)} disabled={scaricando} title="PDF" style={iconBtn('#EEF8F2', '#15803D')}><Download size={14} /></button>
-                      <button onClick={() => inviaWhatsApp(f)} title="WhatsApp" style={iconBtn('#DCFCE7', '#15803D')}><MessageCircle size={14} /></button>
-                      <button onClick={() => inviaEmail(f)} title="Email" style={iconBtn('#EFF6FF', '#3B82F6')}><Mail size={14} /></button>
                       <button onClick={() => setFatturaInModifica(f)} title={lang === 'it' ? 'Modifica' : 'Edit'} style={iconBtn('#EEEEF8', '#5D5C9E')}><Pencil size={14} /></button>
                       <button onClick={() => elimina(f.id)} title={lang === 'it' ? 'Elimina' : 'Delete'} style={iconBtn('#FEF2F2', '#EF4444')}><Trash2 size={14} /></button>
                     </div>
