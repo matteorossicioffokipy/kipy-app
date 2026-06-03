@@ -290,7 +290,7 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, mostraMod
           const colore = getColore(app);
           return (
             <div key={app.id}>
-              <div style={{ background: 'white', padding: '15px', borderRadius: '22px', boxShadow: '0 5px 15px rgba(0,0,0,0.02)', borderLeft: `4px solid ${colore}` }}>
+              <div style={{ background: app.importo && !app.completato ? '#FFFBEB' : 'white', padding: '15px', borderRadius: '22px', boxShadow: app.importo && !app.completato ? '0 5px 15px rgba(255,179,71,0.15)' : '0 5px 15px rgba(0,0,0,0.02)', borderLeft: app.importo && !app.completato ? '4px solid #FFB347' : `4px solid ${colore}` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '2px', flexWrap: 'wrap' }}>

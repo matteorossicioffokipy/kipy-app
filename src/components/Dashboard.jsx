@@ -26,7 +26,7 @@ export default function Dashboard({ setView, config, appuntamenti, supabase, use
 
   // Unisce appuntamenti + todo, ordina per orario
   const impegniOggi = [
-    ...appOggi.map(a => ({ id: a.id, testo: a.titolo, orario: a.ora, isAppuntamento: true })),
+    ...appOggi.map(a => ({ id: a.id, testo: a.titolo, orario: a.ora, isAppuntamento: true, importo: a.importo, completato: a.completato })),
     ...todosOggi.map(todo => ({ id: todo.id, testo: todo.testo, orario: todo.orario, isAppuntamento: false })),
   ].sort((a, b) => (a.orario || '99:99').localeCompare(b.orario || '99:99')).slice(0, 4);
 
@@ -65,6 +65,9 @@ export default function Dashboard({ setView, config, appuntamenti, supabase, use
                 <span style={{ fontSize: '12px', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '3px' }}>
                   <Clock size={11} />{fmtOra(item.orario)}
                 </span>
+              )}
+              {item.isAppuntamento && item.importo && !item.completato && (
+                <span style={{ fontSize: '13px' }} title="Da incassare">💰</span>
               )}
               <span style={{ fontSize: '10px', color: item.isAppuntamento ? '#5D5C9E' : '#22C55E', fontWeight: '700' }}>
                 {item.isAppuntamento ? '📅' : '✓'}
