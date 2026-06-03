@@ -376,7 +376,7 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, mostraMod
       </div>
 
       {/* FAB */}
-      <button onClick={() => setMostraModuloApp(true)} style={{ position: 'fixed', bottom: '30px', right: '20px', width: '64px', height: '64px', borderRadius: '20px', background: orangeKipy, color: 'white', border: 'none', boxShadow: `0 10px 20px ${orangeKipy}40`, display: mostraModuloApp ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation', cursor: 'pointer' }}>
+      <button onClick={() => setMostraModuloApp(true)} style={{ position: 'fixed', bottom: '30px', right: '20px', width: '64px', height: '64px', borderRadius: '20px', background: orangeKipy, color: 'white', border: 'none', boxShadow: `0 10px 20px ${orangeKipy}40`, display: (mostraModuloApp || appModifica) ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation', cursor: 'pointer' }}>
         <Plus size={28} />
       </button>
 
