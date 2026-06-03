@@ -41,9 +41,9 @@ export default function ModaleAppuntamento({ formApp, setFormApp, onSalva, onAnn
   return (
     <div
       onClick={(e) => { if (e.target === e.currentTarget) onAnnulla(); }}
-      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px', boxSizing: 'border-box', overscrollBehavior: 'contain' }}
+      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 1000, padding: '0', boxSizing: 'border-box', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }} onTouchMove={e => e.stopPropagation()}
     >
-      <div style={{ background: 'white', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '380px', boxSizing: 'border-box', boxShadow: '0 20px 60px rgba(0,0,0,0.18)', maxHeight: '90vh', overflowY: 'auto' }}>
+      <div style={{ background: 'white', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '420px', boxSizing: 'border-box', boxShadow: '0 20px 60px rgba(0,0,0,0.18)', minHeight: '100vh', marginTop: '0' }}>
 
         <h3 style={{ margin: '0 0 20px', fontFamily: "'Baloo 2', sans-serif", fontSize: '18px', fontWeight: '800', color: '#1E293B' }}>
           {isEdit ? (lang === 'it' ? '✏️ Modifica appuntamento' : '✏️ Edit appointment') : t('appt_title')}
