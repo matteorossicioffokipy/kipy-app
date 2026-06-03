@@ -36,6 +36,12 @@ export default function ModaleFattura({ clienti = [], fattureCount = 0, onSalva,
   const handleSalva = () => {
     if (!form.cliente_id) return alert(t('fatture_selectClientAlert'));
     if (form.servizi.some(s => !s.descrizione || !s.prezzo)) return alert(t('fatture_fillServices'));
+    if (!config?.codice_fiscale) return alert(lang === 'it'
+      ? 'Per emettere una fattura è obbligatoria la P.IVA o il Codice Fiscale.\nVai su Impostazioni → Coordinate bancarie per aggiungerlo.'
+      : 'A VAT or Company number is required to issue an invoice.\nGo to Settings → Bank details to add it.');
+    if (!config?.iban) return alert(lang === 'it'
+      ? 'Per emettere una fattura è obbligatorio l\'IBAN.\nVai su Impostazioni → Coordinate bancarie per aggiungerlo.'
+      : 'An IBAN is required to issue an invoice.\nGo to Settings → Bank details to add it.');
     onSalva({
       ...form,
       numero: form.numero || `${new Date().getFullYear()}-${String(fattureCount + 1).padStart(3, '0')}`,
