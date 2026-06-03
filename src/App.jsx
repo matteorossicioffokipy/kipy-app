@@ -213,7 +213,7 @@ export default function App() {
             title="Apri Impostazioni"
           >
             <img src={mascot} alt=""
-              style={{ position: 'absolute', bottom: '-8px', right: '12px', height: '90px', width: 'auto', zIndex: 2, filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.2))' }}
+              style={{ position: 'absolute', bottom: '8px', right: '12px', height: '86px', width: 'auto', zIndex: 2, filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.2))' }}
               onError={e => { e.target.style.display = 'none'; }}
             />
             <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '120px', height: '120px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)', zIndex: 0 }} />
@@ -282,7 +282,7 @@ export default function App() {
             supabase={supabase} fetchDati={fetchDati} config={config} clienti={clienti} onConferma={confermaAppuntamento} />
         )}
 
-        {vista === 'TODO' && <TodoList supabase={supabase} user={user} />}
+        {vista === 'TODO' && <TodoList supabase={supabase} user={user} config={config} />}
 
         {vista === 'BUSINESS_CARD' && <BusinessCard config={config} user={user} supabase={supabase} fetchDati={fetchDati} isPro={isPro} />}
 

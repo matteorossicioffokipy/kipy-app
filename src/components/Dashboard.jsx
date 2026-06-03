@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Calendar, CheckSquare, Settings, QrCode, FileText, TrendingUp, BarChart2, Banknote, Clock } from 'lucide-react';
 import { useLang } from '../LanguageContext';
+import { formatOra } from '../utils/timeFormat';
 
 export default function Dashboard({ setView, config, appuntamenti, supabase, user }) {
+  const fmtOra = (ora) => formatOra(ora, config?.formato_orario ?? '24h');
   const { t } = useLang();
   const [todosOggi, setTodosOggi] = useState([]);
 
@@ -61,7 +63,7 @@ export default function Dashboard({ setView, config, appuntamenti, supabase, use
               </span>
               {item.orario && (
                 <span style={{ fontSize: '12px', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                  <Clock size={11} />{item.orario?.slice(0, 5)}
+                  <Clock size={11} />{fmtOra(item.orario)}
                 </span>
               )}
               <span style={{ fontSize: '10px', color: item.isAppuntamento ? '#5D5C9E' : '#22C55E', fontWeight: '700' }}>

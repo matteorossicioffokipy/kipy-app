@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle, Circle, Trash2, Plus, Check, ChevronLeft, ChevronRight, Clock, Calendar } from 'lucide-react';
 import { useLang } from '../LanguageContext';
+import { formatOra } from '../utils/timeFormat';
 
-export default function TodoList({ supabase, user }) {
+export default function TodoList({ supabase, user, config }) {
+  const fmtOra = (ora) => formatOra(ora, config?.formato_orario ?? '24h');
   const { t, lang } = useLang();
   const [todos, setTodos] = useState([]);
   const [nuovoImpegno, setNuovoImpegno] = useState('');
@@ -120,7 +122,7 @@ export default function TodoList({ supabase, user }) {
                 </span>
                 {todo.orario && (
                   <span style={{ fontSize: '13px', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
-                    <Clock size={14} /> {todo.orario.substring(0, 5)}
+                    <Clock size={14} /> {fmtOra(todo.orario)}
                   </span>
                 )}
               </div>
