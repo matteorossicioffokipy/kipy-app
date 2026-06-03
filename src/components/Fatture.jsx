@@ -9,6 +9,7 @@ export default function Fatture({ supabase, user, clienti, config }) {
   const [mostraModale, setMostraModale] = useState(false);
   const [fatturaInModifica, setFatturaInModifica] = useState(null);
   const [fatturaAperta, setFatturaAperta] = useState(null);
+  const [scaricando, setScaricando] = useState(false);
   const currency = lang === 'it' ? '€' : '£';
 
   const fetchFatture = async () => {
@@ -72,7 +73,7 @@ export default function Fatture({ supabase, user, clienti, config }) {
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family:'Inter',Arial,sans-serif; color:#1E293B; background:#F8FAFC; font-size:13px; }
+    body { font-family:'Inter',Arial,sans-serif; color:#1E293B; background:white; font-size:13px; }
     .page { background:white; max-width:794px; margin:0 auto; padding:48px 56px; min-height:1123px; }
     .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:40px; padding-bottom:28px; border-bottom:2px solid #F1F5F9; }
     .logo-area img { height:52px; object-fit:contain; }
@@ -111,9 +112,10 @@ export default function Fatture({ supabase, user, clienti, config }) {
     .total-row { display:flex; justify-content:space-between; padding:7px 0; font-size:12px; border-bottom:1px solid #F1F5F9; color:#64748B; }
     .total-final { display:flex; justify-content:space-between; padding:12px 18px; font-size:17px; font-weight:900; color:white; background:#5D5C9E; border-radius:12px; margin-top:8px; }
     .payment-box { background:#F0F0FA; border-radius:12px; padding:14px 18px; margin-bottom:24px; }
-    .payment-label { font-size:10px; color:#7B7BC0; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; font-weight:700; }
-    .iban { font-size:14px; font-weight:800; color:#5D5C9E; letter-spacing:1px; }
-    .bank { font-size:11px; color:#7B7BC0; margin-top:3px; }
+    .payment-label { font-size:10px; color:#7B7BC0; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; font-weight:700; }
+    .payment-row { display:flex; gap:24px; flex-wrap:wrap; }
+    .payment-item .pi-label { font-size:10px; color:#7B7BC0; margin-bottom:3px; }
+    .payment-item .pi-value { font-size:13px; font-weight:800; color:#5D5C9E; }
     .notes-box { background:#FFFBEB; border:1px solid #FDE68A; border-radius:12px; padding:14px 18px; margin-bottom:24px; }
     .notes-label { font-size:10px; color:#92400E; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; font-weight:700; }
     .notes-box p { font-size:12px; color:#78350F; line-height:1.6; }
@@ -125,7 +127,6 @@ export default function Fatture({ supabase, user, clienti, config }) {
     .footer { text-align:center; padding-top:24px; border-top:1px solid #F1F5F9; margin-top:32px; }
     .footer p { font-size:11px; color:#CBD5E1; }
     .footer .kipri { font-weight:700; color:#5D5C9E; }
-    @media print { body { background:white; } .page { padding:32px 40px; } }
   </style>
 </head>
 <body>
@@ -197,7 +198,16 @@ export default function Fatture({ supabase, user, clienti, config }) {
     </div>
   </div>
 
-  ${config?.iban ? `<div class="payment-box"><div class="payment-label">${isIT ? 'Coordinate bancarie' : 'Payment details'}</div><div class="iban">${config.iban}</div>${config?.nome_banca ? `<div class="bank">${config.nome_banca}</div>` : ''}</div>` : ''}
+  ${(config?.iban || config?.nome_banca || config?.link_pagamento) ? `
+  <div class="payment-box">
+    <div class="payment-label">${isIT ? 'Dettagli pagamento' : 'Payment details'}</div>
+    <div class="payment-row">
+      ${config?.iban ? `<div class="payment-item"><div class="pi-label">IBAN</div><div class="pi-value">${config.iban}</div></div>` : ''}
+      ${config?.nome_banca ? `<div class="payment-item"><div class="pi-label">${isIT ? 'Banca' : 'Bank'}</div><div class="pi-value">${config.nome_banca}</div></div>` : ''}
+      ${config?.codice_fiscale ? `<div class="payment-item"><div class="pi-label">${isIT ? 'P.IVA / C.F.' : 'VAT / Co. No.'}</div><div class="pi-value">${config.codice_fiscale}</div></div>` : ''}
+    </div>
+  </div>` : ''}
+
   ${fattura.note ? `<div class="notes-box"><div class="notes-label">Note</div><p>${fattura.note}</p></div>` : ''}
 
   ${firma ? `<div class="firma-box"><div class="firma-inner"><div class="firma-label">${isIT ? 'Firma' : 'Signature'}</div><div class="firma-text">${firma}</div><div class="firma-name">${config?.nome_azienda || ''}</div></div></div>` : ''}
@@ -208,13 +218,39 @@ export default function Fatture({ supabase, user, clienti, config }) {
 </html>`;
   };
 
-  const scaricaPDF = (fattura) => {
-    const html = generaHTML(fattura, lang);
-    const win = window.open('', '_blank');
-    if (!win) { alert(lang === 'it' ? 'Abilita i popup per scaricare la fattura.' : 'Please allow popups to download the invoice.'); return; }
-    win.document.write(html);
-    win.document.close();
-    win.onload = () => { win.focus(); win.print(); };
+  const scaricaPDF = async (fattura) => {
+    setScaricando(true);
+    try {
+      const { default: jsPDF } = await import('jspdf');
+      const { default: html2canvas } = await import('html2canvas');
+
+      const html = generaHTML(fattura, lang);
+      const container = document.createElement('div');
+      container.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:794px;background:white;';
+      container.innerHTML = html;
+      document.body.appendChild(container);
+
+      await new Promise(r => setTimeout(r, 500));
+
+      const canvas = await html2canvas(container.querySelector('.page') || container, {
+        scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794,
+      });
+      document.body.removeChild(container);
+
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const imgData = canvas.toDataURL('image/png');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`fattura-${fattura.numero}.pdf`);
+    } catch (err) {
+      console.error(err);
+      // fallback a print
+      const html = generaHTML(fattura, lang);
+      const win = window.open('', '_blank');
+      if (win) { win.document.write(html); win.document.close(); win.onload = () => { win.print(); }; }
+    }
+    setScaricando(false);
   };
 
   const inviaWhatsApp = (fattura) => {
@@ -224,8 +260,8 @@ export default function Fatture({ supabase, user, clienti, config }) {
       ? `Ciao ${cliente?.nome || ''}! 👋\nEcco la tua fattura #${fattura.numero} di ${currency}${parseFloat(fattura.totale).toFixed(2)}.\n\nGrazie!\n— ${config?.nome_azienda || ''}`
       : `Hi ${cliente?.nome || ''}! 👋\nPlease find your invoice #${fattura.numero} for ${currency}${parseFloat(fattura.totale).toFixed(2)}.\n\nThank you!\n— ${config?.nome_azienda || ''}`;
     const encoded = encodeURIComponent(testo);
-    if (tel) { window.open(`https://wa.me/${tel}?text=${encoded}`, '_blank'); }
-    else { window.open(`https://wa.me/?text=${encoded}`, '_blank'); }
+    if (tel) window.open(`https://wa.me/${tel}?text=${encoded}`, '_blank');
+    else window.open(`https://wa.me/?text=${encoded}`, '_blank');
   };
 
   const inviaEmail = (fattura) => {
@@ -238,23 +274,24 @@ export default function Fatture({ supabase, user, clienti, config }) {
     window.location.href = `mailto:${cliente.email}?subject=${subject}&body=${body}`;
   };
 
+  // Vista fattura aperta
   if (fatturaAperta) {
     const html = generaHTML(fatturaAperta, lang);
     return (
       <div style={{ fontFamily: "'Baloo 2', sans-serif" }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
-          <button onClick={() => setFatturaAperta(null)} style={{ background: '#F1F5F9', border: 'none', borderRadius: '12px', padding: '10px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Baloo 2',sans-serif", fontWeight: '700', fontSize: '14px', color: '#64748B' }}>
-            <ArrowLeft size={16} /> {lang === 'it' ? 'Indietro' : 'Back'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+          <button onClick={() => setFatturaAperta(null)} style={{ background: '#F1F5F9', border: 'none', borderRadius: '12px', padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Baloo 2',sans-serif", fontWeight: '700', fontSize: '13px', color: '#64748B' }}>
+            <ArrowLeft size={15} /> {lang === 'it' ? 'Indietro' : 'Back'}
           </button>
-          <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
-            <button onClick={() => scaricaPDF(fatturaAperta)} style={{ background: '#EEF8F2', border: 'none', borderRadius: '12px', padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Baloo 2',sans-serif", fontWeight: '700', fontSize: '13px', color: '#15803D' }}>
-              <Download size={15} /> PDF
+          <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto', flexWrap: 'wrap' }}>
+            <button onClick={() => scaricaPDF(fatturaAperta)} disabled={scaricando} style={{ background: '#EEF8F2', border: 'none', borderRadius: '12px', padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Baloo 2',sans-serif", fontWeight: '700', fontSize: '13px', color: '#15803D', opacity: scaricando ? 0.6 : 1 }}>
+              <Download size={14} /> {scaricando ? '...' : 'PDF'}
             </button>
             <button onClick={() => inviaWhatsApp(fatturaAperta)} style={{ background: '#DCFCE7', border: 'none', borderRadius: '12px', padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Baloo 2',sans-serif", fontWeight: '700', fontSize: '13px', color: '#15803D' }}>
-              <MessageCircle size={15} /> WhatsApp
+              <MessageCircle size={14} /> WhatsApp
             </button>
             <button onClick={() => inviaEmail(fatturaAperta)} style={{ background: '#EFF6FF', border: 'none', borderRadius: '12px', padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Baloo 2',sans-serif", fontWeight: '700', fontSize: '13px', color: '#3B82F6' }}>
-              <Mail size={15} /> Email
+              <Mail size={14} /> Email
             </button>
           </div>
         </div>
@@ -301,7 +338,7 @@ export default function Fatture({ supabase, user, clienti, config }) {
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
                     <span style={{ fontSize: '18px', fontWeight: '800', color: '#5D5C9E' }}>{currency}{parseFloat(f.totale).toFixed(2)}</span>
                     <div style={{ display: 'flex', gap: '6px' }} onClick={e => e.stopPropagation()}>
-                      <button onClick={() => scaricaPDF(f)} title="PDF" style={iconBtn('#EEF8F2', '#15803D')}><Download size={14} /></button>
+                      <button onClick={() => scaricaPDF(f)} disabled={scaricando} title="PDF" style={iconBtn('#EEF8F2', '#15803D')}><Download size={14} /></button>
                       <button onClick={() => inviaWhatsApp(f)} title="WhatsApp" style={iconBtn('#DCFCE7', '#15803D')}><MessageCircle size={14} /></button>
                       <button onClick={() => inviaEmail(f)} title="Email" style={iconBtn('#EFF6FF', '#3B82F6')}><Mail size={14} /></button>
                       <button onClick={() => setFatturaInModifica(f)} title={lang === 'it' ? 'Modifica' : 'Edit'} style={iconBtn('#EEEEF8', '#5D5C9E')}><Pencil size={14} /></button>
