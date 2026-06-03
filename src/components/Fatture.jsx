@@ -127,6 +127,27 @@ export default function Fatture({ supabase, user, clienti, config }) {
     .footer { text-align:center; padding-top:24px; border-top:1px solid #F1F5F9; margin-top:32px; }
     .footer p { font-size:11px; color:#CBD5E1; }
     .footer .kipri { font-weight:700; color:#5D5C9E; }
+    @media (max-width: 600px) {
+      .page { padding:24px 20px; min-height:auto; }
+      .header { flex-direction:column; gap:12px; }
+      .company-info { text-align:left; }
+      .title-row { flex-direction:column; gap:12px; align-items:flex-start; }
+      .invoice-label { font-size:28px; }
+      .invoice-badge { text-align:left; padding:8px 14px; }
+      .invoice-badge .num-value { font-size:16px; }
+      .meta-row { flex-direction:column; gap:8px; }
+      .parties { grid-template-columns:1fr; gap:10px; }
+      table { font-size:12px; }
+      th { padding:9px 8px; font-size:10px; }
+      td { padding:9px 8px; font-size:12px; }
+      th:nth-child(3), td:nth-child(3) { display:none; }
+      .totals-wrapper { justify-content:stretch; }
+      .totals-box { width:100%; }
+      .total-final { font-size:15px; padding:10px 14px; }
+      .payment-box { padding:12px 14px; }
+      .payment-row { flex-direction:column; gap:10px; }
+      .firma-box { justify-content:center; }
+    }
   </style>
 </head>
 <body>
