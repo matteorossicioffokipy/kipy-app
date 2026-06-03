@@ -330,7 +330,7 @@ export default function Fatture({ supabase, user, clienti, config }) {
       // A4 ratio: 794 x 1123px
       const canvas = await html2canvas(page, {
         scale: 2, useCORS: true, backgroundColor: '#ffffff',
-        width: 794, height: 1123, windowWidth: 794,
+        width: 794, windowWidth: 794,
       });
       document.body.removeChild(container);
       const link = document.createElement('a');
