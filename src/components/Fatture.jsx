@@ -269,6 +269,7 @@ export default function Fatture({ supabase, user, clienti, config }) {
   };
 
   const scaricaPDF = async (fattura) => {
+    setMostraMenu(false);
     setScaricando(true);
     try {
       const { default: jsPDF } = await import('jspdf');
@@ -276,26 +277,37 @@ export default function Fatture({ supabase, user, clienti, config }) {
 
       const html = generaHTML(fattura, lang);
       const container = document.createElement('div');
-      container.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:794px;background:white;';
+      container.style.cssText = 'position:fixed;top:-9999px;left:0;width:794px;background:white;z-index:-1;';
       container.innerHTML = html;
       document.body.appendChild(container);
+      await new Promise(r => setTimeout(r, 800));
 
-      await new Promise(r => setTimeout(r, 500));
-
-      const canvas = await html2canvas(container.querySelector('.page') || container, {
-        scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794,
+      const page = container.querySelector('.page') || container;
+      const canvas = await html2canvas(page, {
+        scale: 2, useCORS: true, backgroundColor: '#ffffff',
+        width: 794, windowWidth: 794,
       });
       document.body.removeChild(container);
 
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const imgData = canvas.toDataURL('image/png');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      const pdfW = pdf.internal.pageSize.getWidth();
+      const pdfH = pdf.internal.pageSize.getHeight();
+      const imgH = (canvas.height * pdfW) / canvas.width;
+
+      let posY = 0;
+      let remaining = imgH;
+      let first = true;
+      while (remaining > 0) {
+        if (!first) pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, -posY, pdfW, imgH);
+        posY += pdfH;
+        remaining -= pdfH;
+        first = false;
+      }
       pdf.save(`fattura-${fattura.numero}.pdf`);
     } catch (err) {
       console.error(err);
-      // fallback a print
       const html = generaHTML(fattura, lang);
       const win = window.open('', '_blank');
       if (win) { win.document.write(html); win.document.close(); win.onload = () => { win.print(); }; }
