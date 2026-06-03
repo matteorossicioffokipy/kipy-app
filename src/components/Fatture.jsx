@@ -10,6 +10,7 @@ export default function Fatture({ supabase, user, clienti, config }) {
   const [fatturaInModifica, setFatturaInModifica] = useState(null);
   const [fatturaAperta, setFatturaAperta] = useState(null);
   const [scaricando, setScaricando] = useState(false);
+  const [mostraMenu, setMostraMenu] = useState(false);
   const currency = lang === 'it' ? '€' : '£';
 
   const fetchFatture = async () => {
@@ -239,6 +240,34 @@ export default function Fatture({ supabase, user, clienti, config }) {
 </html>`;
   };
 
+  const scaricaImmagine = async (fattura) => {
+    setMostraMenu(false);
+    setScaricando(true);
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      const html = generaHTML(fattura, lang);
+      const container = document.createElement('div');
+      container.style.cssText = 'position:fixed;top:-9999px;left:0;width:390px;background:white;z-index:-1;';
+      container.innerHTML = html;
+      document.body.appendChild(container);
+      await new Promise(r => setTimeout(r, 800));
+      const page = container.querySelector('.page') || container;
+      const canvas = await html2canvas(page, {
+        scale: 2, useCORS: true, backgroundColor: '#ffffff',
+        width: page.scrollWidth, height: page.scrollHeight, windowWidth: 390,
+      });
+      document.body.removeChild(container);
+      const link = document.createElement('a');
+      link.download = `fattura-${fattura.numero}.jpg`;
+      link.href = canvas.toDataURL('image/jpeg', 0.95);
+      link.click();
+    } catch (err) {
+      console.error(err);
+      alert(lang === 'it' ? 'Errore nel salvataggio. Riprova.' : 'Error saving. Please try again.');
+    }
+    setScaricando(false);
+  };
+
   const scaricaPDF = async (fattura) => {
     setScaricando(true);
     try {
@@ -300,20 +329,37 @@ export default function Fatture({ supabase, user, clienti, config }) {
     const html = generaHTML(fatturaAperta, lang);
     return (
       <div style={{ fontFamily: "'Baloo 2', sans-serif" }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-          <button onClick={() => setFatturaAperta(null)} style={{ background: '#F1F5F9', border: 'none', borderRadius: '12px', padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Baloo 2',sans-serif", fontWeight: '700', fontSize: '13px', color: '#64748B' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <button onClick={() => { setFatturaAperta(null); setMostraMenu(false); }} style={{ background: '#F1F5F9', border: 'none', borderRadius: '12px', padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Baloo 2',sans-serif", fontWeight: '700', fontSize: '13px', color: '#64748B' }}>
             <ArrowLeft size={15} /> {lang === 'it' ? 'Indietro' : 'Back'}
           </button>
-          <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto', flexWrap: 'wrap' }}>
-            <button onClick={() => scaricaPDF(fatturaAperta)} disabled={scaricando} style={{ background: '#EEF8F2', border: 'none', borderRadius: '12px', padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Baloo 2',sans-serif", fontWeight: '700', fontSize: '13px', color: '#15803D', opacity: scaricando ? 0.6 : 1 }}>
-              <Download size={14} /> {scaricando ? '...' : 'PDF'}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setMostraMenu(!mostraMenu)}
+              disabled={scaricando}
+              style={{ background: '#5D5C9E', border: 'none', borderRadius: '12px', padding: '10px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Baloo 2',sans-serif", fontWeight: '700', fontSize: '14px', color: 'white', opacity: scaricando ? 0.6 : 1 }}
+            >
+              {scaricando ? '...' : (lang === 'it' ? 'Condividi ▾' : 'Share ▾')}
             </button>
-            <button onClick={() => inviaWhatsApp(fatturaAperta)} style={{ background: '#DCFCE7', border: 'none', borderRadius: '12px', padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Baloo 2',sans-serif", fontWeight: '700', fontSize: '13px', color: '#15803D' }}>
-              <MessageCircle size={14} /> WhatsApp
-            </button>
-            <button onClick={() => inviaEmail(fatturaAperta)} style={{ background: '#EFF6FF', border: 'none', borderRadius: '12px', padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Baloo 2',sans-serif", fontWeight: '700', fontSize: '13px', color: '#3B82F6' }}>
-              <Mail size={14} /> Email
-            </button>
+            {mostraMenu && (
+              <div onClick={() => setMostraMenu(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99 }} />
+            )}
+            {mostraMenu && (
+              <div style={{ position: 'absolute', right: 0, top: '52px', background: 'white', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', border: '1px solid #F1F5F9', zIndex: 100, minWidth: '180px', overflow: 'hidden' }}>
+                <button onClick={() => { setMostraMenu(false); scaricaPDF(fatturaAperta); }} style={menuItemStyle}>
+                  <Download size={16} color="#15803D" /> <span>{lang === 'it' ? 'Scarica PDF' : 'Download PDF'}</span>
+                </button>
+                <button onClick={() => scaricaImmagine(fatturaAperta)} style={menuItemStyle}>
+                  <FileText size={16} color="#5D5C9E" /> <span>{lang === 'it' ? 'Salva come immagine' : 'Save as image'}</span>
+                </button>
+                <button onClick={() => { setMostraMenu(false); inviaWhatsApp(fatturaAperta); }} style={menuItemStyle}>
+                  <MessageCircle size={16} color="#22C55E" /> <span>WhatsApp</span>
+                </button>
+                <button onClick={() => { setMostraMenu(false); inviaEmail(fatturaAperta); }} style={{ ...menuItemStyle, borderBottom: 'none' }}>
+                  <Mail size={16} color="#3B82F6" /> <span>Email</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
         <iframe srcDoc={html} style={{ width: '100%', height: '72vh', border: '1px solid #E2E8F0', borderRadius: '16px' }} title="fattura" />
@@ -387,3 +433,4 @@ const addBtn = { background: '#5D5C9E', color: 'white', border: 'none', width: '
 const cardStyle = { background: 'white', borderRadius: '18px', padding: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', border: '1px solid #F1F5F9' };
 const iconBtn = (bg, color) => ({ background: bg, color, border: 'none', width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' });
 const emptyStyle = { textAlign: 'center', padding: '40px', background: 'white', borderRadius: '20px', border: '2px dashed #E2E8F0', display: 'flex', flexDirection: 'column', alignItems: 'center' };
+const menuItemStyle = { display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '13px 16px', background: 'white', border: 'none', borderBottom: '1px solid #F1F5F9', cursor: 'pointer', fontFamily: "'Baloo 2',sans-serif", fontWeight: '700', fontSize: '14px', color: '#1E293B', textAlign: 'left' };
