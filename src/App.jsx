@@ -79,37 +79,9 @@ export default function App() {
     const { data: appData } = await supabase
       .from('appuntamenti').select('*').eq('user_id', user.id);
     setAppuntamenti(appData || []);
-    await verificaIncassiAutomatici(appData);
   };
 
-  const verificaIncassiRef = React.useRef(false);
-  const verificaIncassiAutomatici = async (appData) => {
-    if (verificaIncassiRef.current) return;
-    verificaIncassiRef.current = true;
-    try {
-      const oggi = new Date().toLocaleDateString('en-CA');
-      const daIncassare = (appData || []).filter(a =>
-        a.importo && !a.completato && a.data < oggi
-      );
-      for (const app of daIncassare) {
-        const { data: updated, error: errUpdate } = await supabase
-          .from('appuntamenti').update({ completato: true })
-          .eq('id', app.id).eq('completato', false).select();
-        if (!errUpdate && updated && updated.length > 0) {
-          await supabase.from('movimenti').insert([{
-            user_id: user.id,
-            tipo: 'entrata',
-            importo: parseFloat(app.importo),
-            categoria: app.categoria || 'Appuntamento',
-            descrizione: app.titolo,
-            data: app.data,
-          }]);
-        }
-      }
-    } finally {
-      verificaIncassiRef.current = false;
-    }
-  };
+
 
   const handleElimina = async (id) => {
     const { error } = await supabase.from('clienti').delete().eq('id', id);
