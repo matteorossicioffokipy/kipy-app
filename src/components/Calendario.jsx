@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Clock, Trash2, Plus, Calendar as CalIcon, MessageCircle, Pencil, FileText, Users, CheckCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Trash2, Plus, Calendar as CalIcon, MessageCircle, Pencil, FileText, Users, CheckCircle, Copy } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 import ModaleAppuntamento from './ModaleAppuntamento';
 import { formatOra } from '../utils/timeFormat';
@@ -14,6 +14,7 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, mostraMod
   const [formModifica, setFormModifica] = useState({});
   const [noteAperte, setNoteAperte] = useState(null);
   const [pickerClienti, setPickerClienti] = useState(null);
+  const [appCopiato, setAppCopiato] = useState(null);
 
   const orangeKipy = '#FFB347';
   const lightOrange = '#FFF7ED';
@@ -203,6 +204,29 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, mostraMod
     }
   };
 
+  const copiaAppuntamento = (app) => {
+    setAppCopiato(app);
+  };
+
+  const incollaAppuntamento = async (dataTarget) => {
+    if (!appCopiato) return;
+    const { error } = await supabase.from('appuntamenti').insert([{
+      user_id: appCopiato.user_id,
+      titolo: appCopiato.titolo,
+      data: dataTarget,
+      data_fine: dataTarget,
+      ora: appCopiato.ora,
+      ora_fine: appCopiato.ora_fine || null,
+      colore: appCopiato.colore || null,
+      categoria: appCopiato.categoria || null,
+      note: appCopiato.note || null,
+      note_dettagliate: appCopiato.note_dettagliate || null,
+      importo: appCopiato.importo || null,
+      completato: false,
+    }]);
+    if (!error) { setAppCopiato(null); fetchDati(); }
+  };
+
   const isMultiGiorno = (app) => app.data_fine && app.data_fine !== app.data;
 
   return (
@@ -250,7 +274,7 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, mostraMod
           {(vistaSettimanale ? getGiorniSettimana() : getGiorniMese()).map((giorno, i) => {
             const colori = coloriGiorno(giorno);
             return (
-              <div key={i} onClick={() => giorno && setDataSelezionata(formattaLocale(giorno))}
+              <div key={i} onClick={() => { if (!giorno) return; const d = formattaLocale(giorno); if (appCopiato) { incollaAppuntamento(d); } else { setDataSelezionata(d); } }}
                 style={{ height: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', borderRadius: '12px', position: 'relative', background: isSelezionato(giorno) ? orangeKipy : 'transparent', color: isSelezionato(giorno) ? 'white' : (isOggi(giorno) ? orangeKipy : '#1E293B'), fontWeight: (isSelezionato(giorno) || isOggi(giorno)) ? '800' : '500', opacity: giorno ? 1 : 0, touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>
                 <span style={{ fontSize: '13px' }}>{giorno && giorno.getDate()}</span>
                 {colori.length > 0 && (
@@ -283,6 +307,17 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, mostraMod
           })()}
         </h3>
       </div>
+
+      {/* BANNER COPIA */}
+      {appCopiato && (
+        <div style={{ background: '#FFF7ED', border: '1px solid #FFB347', borderRadius: '14px', padding: '12px 16px', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: '800', color: '#B45309' }}>📋 {lang === 'it' ? 'Copiato:' : 'Copied:'} {appCopiato.titolo}</div>
+            <div style={{ fontSize: '11px', color: '#D97706', marginTop: '2px' }}>{lang === 'it' ? 'Tocca un giorno per incollare' : 'Tap a day to paste'}</div>
+          </div>
+          <button onClick={() => setAppCopiato(null)} style={{ background: 'transparent', border: 'none', color: '#D97706', cursor: 'pointer', fontSize: '18px', padding: '4px' }}>✕</button>
+        </div>
+      )}
 
       {/* APPUNTAMENTI */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -346,6 +381,9 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, mostraMod
                         <CheckCircle size={16} />
                       </button>
                     )}
+                    <button onClick={() => copiaAppuntamento(app)} title={lang === 'it' ? 'Copia' : 'Copy'} style={{ background: '#FFF7ED', border: 'none', color: '#D97706', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}>
+                      <Copy size={16} />
+                    </button>
                     <button onClick={() => apriModifica(app)} style={{ background: '#EFF6FF', border: 'none', color: '#3B82F6', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}>
                       <Pencil size={16} />
                     </button>
