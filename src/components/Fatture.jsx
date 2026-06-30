@@ -65,6 +65,13 @@ export default function Fatture({ supabase, user, clienti, config, appuntamenti 
     const ivaImp = subtot * (fattura.iva / 100);
     const firma = config?.firma || '';
 
+    // Colore richiamo cliente: ultimo appuntamento confermato del cliente
+    const appCliente = (appuntamenti || [])
+      .filter(a => cliente && a.titolo?.toLowerCase().includes(cliente.nome?.toLowerCase()) && a.colore)
+      .sort((a, b) => b.data.localeCompare(a.data));
+    const accentColor = appCliente[0]?.colore || '#5D5C9E';
+    const accentDark = accentColor;
+
     return `<!DOCTYPE html>
 <html lang="${isIT ? 'it' : 'en'}">
 <head>
@@ -78,15 +85,15 @@ export default function Fatture({ supabase, user, clienti, config, appuntamenti 
     .page { background:white; max-width:794px; margin:0 auto; padding:48px 56px; min-height:1123px; }
     .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:40px; padding-bottom:28px; border-bottom:2px solid #F1F5F9; }
     .logo-area img { height:52px; object-fit:contain; }
-    .logo-area .company-name { font-size:22px; font-weight:900; color:#5D5C9E; }
+    .logo-area .company-name { font-size:22px; font-weight:900; color:${accentColor}; }
     .company-info { text-align:right; }
     .company-info .name { font-size:15px; font-weight:800; color:#1E293B; margin-bottom:4px; }
     .company-info p { font-size:11px; color:#64748B; line-height:1.8; }
     .title-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; }
-    .invoice-label { font-size:36px; font-weight:900; color:#5D5C9E; letter-spacing:-1px; }
+    .invoice-label { font-size:36px; font-weight:900; color:${accentColor}; letter-spacing:-1px; }
     .invoice-badge { background:#F0F0FA; border-radius:12px; padding:10px 18px; text-align:right; }
     .invoice-badge .num-label { font-size:10px; color:#94A3B8; text-transform:uppercase; letter-spacing:1px; }
-    .invoice-badge .num-value { font-size:20px; font-weight:900; color:#5D5C9E; }
+    .invoice-badge .num-value { font-size:20px; font-weight:900; color:${accentColor}; }
     .meta-row { display:flex; gap:12px; margin-bottom:28px; }
     .meta-box { background:#F8FAFC; border:1px solid #F1F5F9; border-radius:12px; padding:12px 16px; flex:1; }
     .meta-box .label { font-size:10px; color:#94A3B8; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
@@ -97,7 +104,7 @@ export default function Fatture({ supabase, user, clienti, config, appuntamenti 
     .party-box .party-name { font-size:14px; font-weight:800; color:#1E293B; margin-bottom:4px; }
     .party-box p { font-size:11px; color:#64748B; line-height:1.7; }
     table { width:100%; border-collapse:collapse; margin-bottom:20px; }
-    thead tr { background:#5D5C9E; }
+    thead tr { background:${accentColor}; }
     th { color:white; padding:11px 14px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
     th:first-child { border-radius:10px 0 0 10px; text-align:left; }
     th:last-child { border-radius:0 10px 10px 0; text-align:right; }
@@ -111,12 +118,12 @@ export default function Fatture({ supabase, user, clienti, config, appuntamenti 
     .totals-wrapper { display:flex; justify-content:flex-end; margin-bottom:28px; }
     .totals-box { width:260px; }
     .total-row { display:flex; justify-content:space-between; padding:7px 0; font-size:12px; border-bottom:1px solid #F1F5F9; color:#64748B; }
-    .total-final { display:flex; justify-content:space-between; padding:12px 18px; font-size:17px; font-weight:900; color:white; background:#5D5C9E; border-radius:12px; margin-top:8px; }
+    .total-final { display:flex; justify-content:space-between; padding:12px 18px; font-size:17px; font-weight:900; color:white; background:${accentColor}; border-radius:12px; margin-top:8px; }
     .payment-box { background:#F0F0FA; border-radius:12px; padding:14px 18px; margin-bottom:24px; }
     .payment-label { font-size:10px; color:#7B7BC0; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; font-weight:700; }
     .payment-row { display:flex; gap:24px; flex-wrap:wrap; }
     .payment-item .pi-label { font-size:10px; color:#7B7BC0; margin-bottom:3px; }
-    .payment-item .pi-value { font-size:13px; font-weight:800; color:#5D5C9E; }
+    .payment-item .pi-value { font-size:13px; font-weight:800; color:${accentColor}; }
     .notes-box { background:#FFFBEB; border:1px solid #FDE68A; border-radius:12px; padding:14px 18px; margin-bottom:24px; }
     .notes-label { font-size:10px; color:#92400E; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; font-weight:700; }
     .notes-box p { font-size:12px; color:#78350F; line-height:1.6; }
@@ -127,7 +134,7 @@ export default function Fatture({ supabase, user, clienti, config, appuntamenti 
     .firma-name { font-size:10px; color:#94A3B8; margin-top:6px; }
     .footer { text-align:center; padding-top:24px; border-top:1px solid #F1F5F9; margin-top:32px; }
     .footer p { font-size:11px; color:#CBD5E1; }
-    .footer .kipri { font-weight:700; color:#5D5C9E; }
+    .footer .kipri { font-weight:700; color:${accentColor}; }
     @media (max-width: 600px) {
       .page { padding:24px 20px; min-height:auto; }
       .header { flex-direction:column; gap:12px; }
@@ -214,7 +221,7 @@ export default function Fatture({ supabase, user, clienti, config, appuntamenti 
 
   <div class="totals-wrapper">
     <div class="totals-box">
-      <div class="total-row"><span>Subtotale</span><span>${curr}${subtot.toFixed(2)}</span></div>
+      <div class="total-row"><span>${isIT ? 'Subtotale' : 'Subtotal'}</span><span>${curr}${subtot.toFixed(2)}</span></div>
       ${fattura.iva > 0 ? `<div class="total-row"><span>IVA/VAT ${fattura.iva}%</span><span>${curr}${ivaImp.toFixed(2)}</span></div>` : ''}
       <div class="total-final"><span>TOTALE</span><span>${curr}${fattura.totale.toFixed(2)}</span></div>
     </div>
@@ -230,7 +237,7 @@ export default function Fatture({ supabase, user, clienti, config, appuntamenti 
     </div>
   </div>` : ''}
 
-  ${fattura.note ? `<div class="notes-box"><div class="notes-label">Note</div><p>${fattura.note}</p></div>` : ''}
+  ${fattura.note ? `<div class="notes-box"><div class="notes-label">${isIT ? 'Note' : 'Notes'}</div><p>${fattura.note}</p></div>` : ''}
 
   ${firma ? `<div class="firma-box"><div class="firma-inner"><div class="firma-label">${isIT ? 'Firma' : 'Signature'}</div><div class="firma-text">${firma}</div><div class="firma-name">${config?.nome_azienda || ''}</div></div></div>` : ''}
 
