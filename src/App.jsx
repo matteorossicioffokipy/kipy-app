@@ -268,7 +268,7 @@ export default function App() {
 
         {vista === 'FATTURE' && (
           isPro
-            ? <Fatture supabase={supabase} user={user} clienti={clienti} config={config} />
+            ? <Fatture supabase={supabase} user={user} clienti={clienti} config={config} appuntamenti={appuntamenti} />
             : <ProGate onUpgrade={handleUpgradePro} loading={loadingPro} />
         )}
 

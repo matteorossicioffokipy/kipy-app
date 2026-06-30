@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Trash2, FileText, Eye, EyeOff } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 
-export default function ModaleFattura({ clienti = [], fattureCount = 0, onSalva, onAnnulla, fatturaInModifica = null, config = {} }) {
+export default function ModaleFattura({ clienti = [], fattureCount = 0, onSalva, onAnnulla, fatturaInModifica = null, config = {}, appuntamenti = [] }) {
   const { t, lang } = useLang();
   const currency = lang === 'it' ? '€' : '£';
   const isEdit = !!fatturaInModifica;
@@ -33,15 +33,35 @@ export default function ModaleFattura({ clienti = [], fattureCount = 0, onSalva,
     const nuovi = [...form.servizi]; nuovi[i][campo] = valore; setForm({ ...form, servizi: nuovi });
   };
 
+  const importaAppuntamentiConfermati = () => {
+    if (!form.cliente_id) return;
+    const cliente = clienti.find(c => c.id === parseInt(form.cliente_id));
+    if (!cliente) return;
+    const meseRiferimento = form.data ? form.data.slice(0, 7) : new Date().toISOString().slice(0, 7);
+    const appConfermati = (appuntamenti || []).filter(a =>
+      a.completato &&
+      a.importo &&
+      a.data?.startsWith(meseRiferimento) &&
+      a.titolo?.toLowerCase().includes(cliente.nome?.toLowerCase())
+    );
+    if (appConfermati.length === 0) {
+      alert(lang === 'it' ? 'Nessun appuntamento confermato trovato per questo cliente nel mese selezionato.' : 'No confirmed appointments found for this client in the selected month.');
+      return;
+    }
+    const nuoviServizi = appConfermati
+      .sort((a, b) => a.data.localeCompare(b.data))
+      .map(a => ({
+        descrizione: `${a.titolo} — ${new Date(a.data + 'T00:00:00').toLocaleDateString(lang === 'it' ? 'it-IT' : 'en-GB', { day: 'numeric', month: 'short' })}`,
+        quantita: 1,
+        prezzo: String(a.importo),
+      }));
+    const servizioVuoto = form.servizi.length === 1 && !form.servizi[0].descrizione && !form.servizi[0].prezzo;
+    setForm({ ...form, servizi: servizioVuoto ? nuoviServizi : [...form.servizi, ...nuoviServizi] });
+  };
+
   const handleSalva = () => {
     if (!form.cliente_id) return alert(t('fatture_selectClientAlert'));
     if (form.servizi.some(s => !s.descrizione || !s.prezzo)) return alert(t('fatture_fillServices'));
-    if (!config?.codice_fiscale) return alert(lang === 'it'
-      ? 'Per emettere una fattura è obbligatoria la P.IVA o il Codice Fiscale.\nVai su Impostazioni → Coordinate bancarie per aggiungerlo.'
-      : 'A VAT or Company number is required to issue an invoice.\nGo to Settings → Bank details to add it.');
-    if (!config?.iban) return alert(lang === 'it'
-      ? 'Per emettere una fattura è obbligatorio l\'IBAN.\nVai su Impostazioni → Coordinate bancarie per aggiungerlo.'
-      : 'An IBAN is required to issue an invoice.\nGo to Settings → Bank details to add it.');
     onSalva({
       ...form,
       numero: form.numero || `${new Date().getFullYear()}-${String(fattureCount + 1).padStart(3, '0')}`,
@@ -195,6 +215,11 @@ ${form.note ? `<div style="background:#FFFBEB;border:1px solid #FDE68A;border-ra
                 <option value="">{t('fatture_selectClient')}</option>
                 {clienti.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
               </select>
+              {form.cliente_id && (
+                <button onClick={importaAppuntamentiConfermati} type="button" style={{ marginTop: '8px', width: '100%', background: '#EEF8F2', color: '#15803D', border: '1px solid #BBF7D0', borderRadius: '12px', padding: '10px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: "'Baloo 2',sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                  📅 {lang === 'it' ? 'Importa appuntamenti confermati del mese' : 'Import confirmed appointments this month'}
+                </button>
+              )}
             </div>
 
             <div style={{ marginBottom: '12px' }}>

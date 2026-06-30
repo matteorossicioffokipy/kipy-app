@@ -3,7 +3,7 @@ import { Plus, FileText, Download, Trash2, Mail, Pencil, MessageCircle, ArrowLef
 import { useLang } from '../LanguageContext';
 import ModaleFattura from './ModaleFattura';
 
-export default function Fatture({ supabase, user, clienti, config }) {
+export default function Fatture({ supabase, user, clienti, config, appuntamenti }) {
   const { t, lang } = useLang();
   const [fatture, setFatture] = useState([]);
   const [mostraModale, setMostraModale] = useState(false);
@@ -458,10 +458,10 @@ export default function Fatture({ supabase, user, clienti, config }) {
       )}
 
       {mostraModale && (
-        <ModaleFattura clienti={clienti} fattureCount={fatture.length} config={config} onSalva={handleSalva} onAnnulla={() => setMostraModale(false)} />
+        <ModaleFattura clienti={clienti} fattureCount={fatture.length} config={config} appuntamenti={appuntamenti} onSalva={handleSalva} onAnnulla={() => setMostraModale(false)} />
       )}
       {fatturaInModifica && (
-        <ModaleFattura clienti={clienti} fattureCount={fatture.length} config={config} fatturaInModifica={fatturaInModifica} onSalva={handleModifica} onAnnulla={() => setFatturaInModifica(null)} />
+        <ModaleFattura clienti={clienti} fattureCount={fatture.length} config={config} appuntamenti={appuntamenti} fatturaInModifica={fatturaInModifica} onSalva={handleModifica} onAnnulla={() => setFatturaInModifica(null)} />
       )}
     </div>
   );
