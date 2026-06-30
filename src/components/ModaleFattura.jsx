@@ -48,13 +48,20 @@ export default function ModaleFattura({ clienti = [], fattureCount = 0, onSalva,
       alert(lang === 'it' ? 'Nessun appuntamento confermato trovato per questo cliente nel mese selezionato.' : 'No confirmed appointments found for this client in the selected month.');
       return;
     }
-    const nuoviServizi = appConfermati
-      .sort((a, b) => a.data.localeCompare(b.data))
-      .map(a => ({
-        descrizione: `${a.titolo} — ${new Date(a.data + 'T00:00:00').toLocaleDateString(lang === 'it' ? 'it-IT' : 'en-GB', { day: 'numeric', month: 'short' })}`,
-        quantita: 1,
-        prezzo: String(a.importo),
-      }));
+    // Raggruppa per titolo + importo unitario
+    const gruppi = {};
+    appConfermati.forEach(a => {
+      const chiave = `${a.titolo}__${a.importo}`;
+      if (!gruppi[chiave]) gruppi[chiave] = { titolo: a.titolo, prezzo: a.importo, quantita: 0 };
+      gruppi[chiave].quantita += 1;
+    });
+    const nuoviServizi = Object.values(gruppi).map(g => ({
+      descrizione: g.quantita > 1
+        ? `${g.titolo} ${lang === 'it' ? `x${g.quantita} volte` : `x${g.quantita}`}`
+        : g.titolo,
+      quantita: g.quantita,
+      prezzo: String(g.prezzo),
+    }));
     const servizioVuoto = form.servizi.length === 1 && !form.servizi[0].descrizione && !form.servizi[0].prezzo;
     setForm({ ...form, servizi: servizioVuoto ? nuoviServizi : [...form.servizi, ...nuoviServizi] });
   };
