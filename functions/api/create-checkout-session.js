@@ -21,8 +21,8 @@ export async function onRequestPost(context) {
         'line_items[0][quantity]': '1',
         'customer_email': email,
         'metadata[user_id]': userId,
-        'success_url': 'https://kipri.app?pro=success',
-        'cancel_url': 'https://kipri.app?pro=cancel',
+        'success_url': 'https://app.kipri.app?pro=success',
+        'cancel_url': 'https://app.kipri.app?pro=cancel',
       }),
     });
 
