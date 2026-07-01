@@ -207,7 +207,7 @@ export default function Fatture({ supabase, user, clienti, config, appuntamenti 
       <th>${isIT ? 'Descrizione' : 'Description'}</th>
       <th style="text-align:center;">${isIT ? 'Qtà' : 'Qty'}</th>
       <th style="text-align:right;">${isIT ? 'Prezzo unitario' : 'Unit price'}</th>
-      <th style="text-align:right;">Totale</th>
+      <th style="text-align:right;">${isIT ? 'Totale' : 'Total'}</th>
     </tr></thead>
     <tbody>
       ${servizi.map(s => `<tr>
@@ -223,7 +223,7 @@ export default function Fatture({ supabase, user, clienti, config, appuntamenti 
     <div class="totals-box">
       <div class="total-row"><span>${isIT ? 'Subtotale' : 'Subtotal'}</span><span>${curr}${subtot.toFixed(2)}</span></div>
       ${fattura.iva > 0 ? `<div class="total-row"><span>IVA/VAT ${fattura.iva}%</span><span>${curr}${ivaImp.toFixed(2)}</span></div>` : ''}
-      <div class="total-final"><span>TOTALE</span><span>${curr}${fattura.totale.toFixed(2)}</span></div>
+      <div class="total-final"><span>${isIT ? 'TOTALE' : 'TOTAL'}</span><span>${curr}${fattura.totale.toFixed(2)}</span></div>
     </div>
   </div>
 
