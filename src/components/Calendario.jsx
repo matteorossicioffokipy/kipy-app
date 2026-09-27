@@ -73,7 +73,7 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, mostraMod
     const dateStr = formattaLocale(date);
     return (appuntamenti || [])
       .filter(a => dateStr >= a.data && dateStr <= (a.data_fine || a.data))
-      .map(a => a.colore || orangeKipy).slice(0, 5);
+      .map(a => a.colore || orangeKipy);
   };
 
   const appuntamentiGiorno = (appuntamenti || [])
