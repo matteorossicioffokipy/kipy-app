@@ -131,13 +131,18 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, mostraMod
     const tel = cliente?.tel?.replace(/\D/g, '');
     const pezzi = app.data.split('-');
     const dataObj = new Date(pezzi[0], pezzi[1] - 1, pezzi[2]);
-    const dataFormattata = dataObj.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
-    const testoTemplate = config?.promemoria_testo ||
-      `Ciao! 👋\nTi ricordiamo il tuo appuntamento con ${config?.nome_azienda || 'noi'} {data} alle {ora}.\nA presto!`;
+    const locale = lang === 'it' ? 'it-IT' : 'en-GB';
+    const dataFormattata = dataObj.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' });
+    const oraFormattata = fmtOra(app.ora);
+    const oraFineFormattata = app.ora_fine ? ` → ${fmtOra(app.ora_fine)}` : '';
+    const defaultTemplate = lang === 'it'
+      ? `Ciao ${cliente?.nome || ''}! 👋\nTi ricordiamo il tuo appuntamento con ${config?.nome_azienda || 'noi'}\n📅 ${dataFormattata}\n🕐 ${oraFormattata}${oraFineFormattata}\nA presto!`
+      : `Hi ${cliente?.nome || ''}! 👋\nThis is a reminder for your appointment with ${config?.nome_azienda || 'us'}\n📅 ${dataFormattata}\n🕐 ${oraFormattata}${oraFineFormattata}\nSee you soon!`;
+    const testoTemplate = config?.promemoria_testo || defaultTemplate;
     const testo = testoTemplate
       .replace('{nome}', cliente?.nome || '')
       .replace('{data}', dataFormattata)
-      .replace('{ora}', fmtOra(app.ora));
+      .replace('{ora}', oraFormattata);
     const testoEncoded = encodeURIComponent(testo);
     if (tel) {
       window.open(`https://wa.me/${tel}?text=${testoEncoded}`, '_blank');
