@@ -73,7 +73,7 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, mostraMod
     const dateStr = formattaLocale(date);
     return (appuntamenti || [])
       .filter(a => dateStr >= a.data && dateStr <= (a.data_fine || a.data))
-      .map(a => a.colore || orangeKipy);
+      .map(a => a.colore || orangeKipy).slice(0, 5);
   };
 
   const appuntamentiGiorno = (appuntamenti || [])
@@ -169,9 +169,9 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, mostraMod
       if (!gruppi[nomeCliente]) gruppi[nomeCliente] = { apps: [], tel, cliente };
       gruppi[nomeCliente].apps.push(app);
     });
-    const clientiMultipli = Object.entries(gruppi).filter(([, v]) => v.apps.length >= 2);
+    const clientiMultipli = Object.entries(gruppi);
     if (clientiMultipli.length === 0) {
-      alert(lang === 'it' ? 'Nessun cliente ha più di un appuntamento questa settimana.' : 'No client has more than one appointment this week.');
+      alert(lang === 'it' ? 'Nessun appuntamento questa settimana.' : 'No appointments this week.');
       return;
     }
     if (clientiMultipli.length === 1) {
