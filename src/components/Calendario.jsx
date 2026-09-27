@@ -279,7 +279,7 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, mostraMod
                 <span style={{ fontSize: '13px' }}>{giorno && giorno.getDate()}</span>
                 {colori.length > 0 && (
                   <div style={{ display: 'flex', gap: '2px', position: 'absolute', bottom: '4px' }}>
-                    {colori.slice(0, 3).map((c, idx) => (
+                    {colori.map((c, idx) => (
                       <div key={idx} style={{ width: '4px', height: '4px', borderRadius: '50%', background: isSelezionato(giorno) ? 'white' : c }} />
                     ))}
                   </div>
