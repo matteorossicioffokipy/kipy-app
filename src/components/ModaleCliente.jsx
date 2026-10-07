@@ -45,6 +45,24 @@ export default function ModaleCliente({ clienteInModifica, formCliente, setFormC
             value={formCliente.codice_fiscale || ''}
             onChange={e => setFormCliente({ ...formCliente, codice_fiscale: e.target.value })} />
         </div>
+
+        {lang === 'it' && (
+          <>
+            <div style={{ marginBottom: '12px' }}>
+              <label style={lbl}>Codice SDI</label>
+              <input style={inp} placeholder="Es: ABCDEFG (7 caratteri)"
+                value={formCliente.codice_sdi || ''}
+                onChange={e => setFormCliente({ ...formCliente, codice_sdi: e.target.value.toUpperCase() })} />
+            </div>
+            <div style={{ marginBottom: '12px' }}>
+              <label style={lbl}>PEC fatturazione</label>
+              <input style={inp} placeholder="pec@esempio.it" type="email"
+                value={formCliente.pec || ''}
+                onChange={e => setFormCliente({ ...formCliente, pec: e.target.value })} />
+            </div>
+          </>
+        )}
+
         <div style={{ marginBottom: '20px' }}>
           <label style={lbl}>{t('rubrica_notes')}</label>
           <textarea style={{ ...inp, minHeight: '72px', resize: 'vertical' }}
@@ -75,7 +93,7 @@ export default function ModaleCliente({ clienteInModifica, formCliente, setFormC
 }
 
 const overlay = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px', boxSizing: 'border-box' };
-const modal = { background: 'white', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '360px', boxSizing: 'border-box', boxShadow: '0 20px 60px rgba(0,0,0,0.18)', overflow: 'hidden' };
+const modal = { background: 'white', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '360px', boxSizing: 'border-box', boxShadow: '0 20px 60px rgba(0,0,0,0.18)', overflow: 'hidden', maxHeight: '90vh', overflowY: 'auto' };
 const title = { margin: '0 0 20px', fontFamily: "'Baloo 2', sans-serif", fontSize: '18px', fontWeight: '800', color: '#1E293B' };
 const lbl = { display: 'block', fontSize: '12px', fontWeight: '700', color: '#64748B', marginBottom: '6px', fontFamily: "'Baloo 2', sans-serif", textTransform: 'uppercase', letterSpacing: '0.3px' };
 const inp = { display: 'block', width: '100%', padding: '11px 13px', borderRadius: '12px', border: '1.5px solid #E2E8F0', boxSizing: 'border-box', fontFamily: "'Baloo 2', sans-serif", fontSize: '14px', color: '#1E293B', outline: 'none', background: '#F8FAFC', WebkitAppearance: 'none' };

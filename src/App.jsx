@@ -32,7 +32,7 @@ export default function App() {
   const [mostraModuloCliente, setMostraModuloCliente] = useState(false);
   const [mostraModuloApp, setMostraModuloApp] = useState(false);
   const [clienteInModifica, setClienteInModifica] = useState(null);
-  const [formCliente, setFormCliente] = useState({ nome: '', tel: '', email: '', note: '' });
+  const [formCliente, setFormCliente] = useState({ nome: '', tel: '', email: '', note: '', codice_fiscale: '', codice_sdi: '', pec: '' });
   const [formApp, setFormApp] = useState({ titolo: '', data: '', ora: '' });
   const [loadingPro, setLoadingPro] = useState(false);
 
