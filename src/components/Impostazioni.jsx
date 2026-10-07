@@ -27,6 +27,11 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
       link_pagamento_3: config.link_pagamento_3 ?? '',
       label_pagamento_3: config.label_pagamento_3 ?? '',
       firma: config.firma ?? '',
+      indirizzo: config.indirizzo ?? '',
+      cap: config.cap ?? '',
+      citta: config.citta ?? '',
+      provincia: config.provincia ?? '',
+      regime_fiscale: config.regime_fiscale ?? 'RF19',
     }).eq('user_id', user.id);
     if (!error) {
       setSalvato(true);
@@ -288,6 +293,27 @@ export default function Impostazioni({ config, setConfig, supabase, user, fetchD
             value={config.firma || ''}
             onChange={(e) => setConfig({ ...config, firma: e.target.value })}
             placeholder={lang === 'it' ? 'Es: Mario Rossi' : 'E.g: John Smith'} />
+          {lang === 'it' && (
+            <>
+              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1.5px solid #F1F5F9' }}>
+                <div style={{ fontSize: '11px', fontWeight: '800', color: '#5D5C9E', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>🇮🇹 Dati FatturaPA / SDI</div>
+              </div>
+              <label style={{ ...labelStyle, marginTop: '0px' }}>Indirizzo</label>
+              <input style={inputStyle} value={config.indirizzo || ''} onChange={(e) => setConfig({ ...config, indirizzo: e.target.value })} placeholder="Es: Via Roma 1" />
+              <label style={{ ...labelStyle, marginTop: '10px' }}>CAP</label>
+              <input style={inputStyle} value={config.cap || ''} onChange={(e) => setConfig({ ...config, cap: e.target.value })} placeholder="Es: 20121" />
+              <label style={{ ...labelStyle, marginTop: '10px' }}>Città</label>
+              <input style={inputStyle} value={config.citta || ''} onChange={(e) => setConfig({ ...config, citta: e.target.value })} placeholder="Es: Milano" />
+              <label style={{ ...labelStyle, marginTop: '10px' }}>Provincia (2 lettere)</label>
+              <input style={inputStyle} value={config.provincia || ''} onChange={(e) => setConfig({ ...config, provincia: e.target.value.toUpperCase() })} placeholder="Es: MI" maxLength={2} />
+              <label style={{ ...labelStyle, marginTop: '10px' }}>Regime Fiscale</label>
+              <select style={inputStyle} value={config.regime_fiscale || 'RF19'} onChange={(e) => setConfig({ ...config, regime_fiscale: e.target.value })}>
+                <option value="RF01">RF01 – Regime ordinario</option>
+                <option value="RF19">RF19 – Regime forfettario</option>
+                <option value="RF02">RF02 – Regime contribuenti minimi</option>
+              </select>
+            </>
+          )}
         </div>
       ) : (
         <div style={{ ...sectionStyle, opacity: 0.7, position: 'relative', overflow: 'hidden' }}>
