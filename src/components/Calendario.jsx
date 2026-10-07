@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Clock, Trash2, Plus, Calendar as CalIcon, MessageCircle, Pencil, FileText, Users, CheckCircle, Copy } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Trash2, Plus, Calendar as CalIcon, MessageCircle, Pencil, FileText, Users, CheckCircle, Copy, Upload, X, Info } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 import ModaleAppuntamento from './ModaleAppuntamento';
 import { formatOra } from '../utils/timeFormat';
@@ -15,6 +15,10 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, mostraMod
   const [noteAperte, setNoteAperte] = useState(null);
   const [pickerClienti, setPickerClienti] = useState(null);
   const [appCopiato, setAppCopiato] = useState(null);
+  const [mostraImport, setMostraImport] = useState(false);
+  const [mostraGuidaImport, setMostraGuidaImport] = useState(false);
+  const [eventiImport, setEventiImport] = useState([]);
+  const [eventiSelezionati, setEventiSelezionati] = useState([]);
 
   const orangeKipy = '#FFB347';
   const lightOrange = '#FFF7ED';
@@ -232,6 +236,58 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, mostraMod
     if (!error) { setAppCopiato(null); fetchDati(); }
   };
 
+  const parseICS = (text) => {
+    const eventi = [];
+    const blocks = text.split('BEGIN:VEVENT');
+    blocks.slice(1).forEach(block => {
+      const get = (key) => {
+        const match = block.match(new RegExp(key + '[^:]*:([^\r\n]+)'));
+        return match ? match[1].trim() : '';
+      };
+      const dtstart = get('DTSTART');
+      const summary = get('SUMMARY');
+      if (!dtstart || !summary) return;
+      const dateStr = dtstart.replace(/T.*/, '').replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
+      const timeStr = dtstart.includes('T') ? dtstart.replace(/.*T(\d{2})(\d{2}).*/, '$1:$2') : '';
+      const dtend = get('DTEND');
+      const timeEnd = dtend && dtend.includes('T') ? dtend.replace(/.*T(\d{2})(\d{2}).*/, '$1:$2') : '';
+      eventi.push({ id: Math.random().toString(36).slice(2), titolo: summary, data: dateStr, ora: timeStr, ora_fine: timeEnd });
+    });
+    return eventi;
+  };
+
+  const handleFileICS = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const eventi = parseICS(ev.target.result);
+      setEventiImport(eventi);
+      setEventiSelezionati(eventi.map(ev => ev.id));
+    };
+    reader.readAsText(file);
+  };
+
+  const importaEventi = async () => {
+    const daImportare = eventiImport.filter(ev => eventiSelezionati.includes(ev.id));
+    for (const ev of daImportare) {
+      await supabase.from('appuntamenti').insert([{
+        user_id: user.id,
+        titolo: ev.titolo,
+        data: ev.data,
+        data_fine: ev.data,
+        ora: ev.ora || '09:00',
+        ora_fine: ev.ora_fine || null,
+        colore: orangeKipy,
+        completato: false,
+      }]);
+    }
+    setMostraImport(false);
+    setEventiImport([]);
+    setEventiSelezionati([]);
+    fetchDati();
+  };
+
   const isMultiGiorno = (app) => app.data_fine && app.data_fine !== app.data;
 
   return (
@@ -248,13 +304,18 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, mostraMod
               {vistaSettimanale ? t('calendario_week') : meseVisualizzato.toLocaleDateString('it-IT', { month: 'short', year: 'numeric' })}
             </h2>
           </div>
-          <div style={{ display: 'flex', gap: '4px', background: '#F1F5F9', padding: '3px', borderRadius: '12px' }}>
-            <button onClick={() => setVistaSettimanale(false)} style={{ border: 'none', background: !vistaSettimanale ? orangeKipy : 'transparent', color: !vistaSettimanale ? 'white' : '#64748B', padding: '6px 10px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '10px', touchAction: 'manipulation' }}>
-              {t('calendario_month')}
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <button onClick={() => { setMostraImport(!mostraImport); setEventiImport([]); setEventiSelezionati([]); }} style={{ background: mostraImport ? '#EEEEF8' : '#F1F5F9', border: 'none', borderRadius: '10px', padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', color: mostraImport ? '#5D5C9E' : '#64748B', fontWeight: '700', fontSize: '10px', touchAction: 'manipulation' }}>
+              <Upload size={13} />{lang === 'it' ? 'Importa' : 'Import'}
             </button>
-            <button onClick={() => setVistaSettimanale(true)} style={{ border: 'none', background: vistaSettimanale ? orangeKipy : 'transparent', color: vistaSettimanale ? 'white' : '#64748B', padding: '6px 10px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '10px', touchAction: 'manipulation' }}>
-              {t('calendario_week')}
-            </button>
+            <div style={{ display: 'flex', gap: '4px', background: '#F1F5F9', padding: '3px', borderRadius: '12px' }}>
+              <button onClick={() => setVistaSettimanale(false)} style={{ border: 'none', background: !vistaSettimanale ? orangeKipy : 'transparent', color: !vistaSettimanale ? 'white' : '#64748B', padding: '6px 10px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '10px', touchAction: 'manipulation' }}>
+                {t('calendario_month')}
+              </button>
+              <button onClick={() => setVistaSettimanale(true)} style={{ border: 'none', background: vistaSettimanale ? orangeKipy : 'transparent', color: vistaSettimanale ? 'white' : '#64748B', padding: '6px 10px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '10px', touchAction: 'manipulation' }}>
+                {t('calendario_week')}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -312,6 +373,94 @@ export default function Calendario({ appuntamenti, setMostraModuloApp, mostraMod
           })()}
         </h3>
       </div>
+
+      {/* PANNELLO IMPORT */}
+      {mostraImport && (
+        <div style={{ background: 'white', borderRadius: '20px', padding: '18px', marginBottom: '16px', boxShadow: '0 4px 20px rgba(93,92,158,0.10)', border: '1.5px solid #EEEEF8' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: '800', color: '#1E293B' }}>
+                <Upload size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                {lang === 'it' ? 'Importa calendario' : 'Import calendar'}
+              </div>
+              <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '2px' }}>
+                {lang === 'it' ? 'Carica un file .ics da Google, Apple, Outlook o Yahoo' : 'Upload a .ics file from Google, Apple, Outlook or Yahoo'}
+              </div>
+            </div>
+            <button onClick={() => setMostraImport(false)} style={{ background: '#F1F5F9', border: 'none', borderRadius: '8px', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
+              <X size={14} />
+            </button>
+          </div>
+
+          {/* Guida mini */}
+          <button onClick={() => setMostraGuidaImport(!mostraGuidaImport)} style={{ background: '#F8F9FF', border: 'none', borderRadius: '10px', padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: '#5D5C9E', fontWeight: '700', fontSize: '12px', marginBottom: '12px', width: '100%', justifyContent: 'space-between', touchAction: 'manipulation' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Info size={14} />
+              {lang === 'it' ? 'Come esportare il file .ics?' : 'How to export the .ics file?'}
+            </span>
+            <span>{mostraGuidaImport ? '▲' : '▼'}</span>
+          </button>
+
+          {mostraGuidaImport && (
+            <div style={{ background: '#F8F9FF', borderRadius: '10px', padding: '12px 14px', marginBottom: '12px', fontSize: '12px', color: '#475569', lineHeight: '1.7' }}>
+              {lang === 'it' ? (
+                <div>
+                  <div style={{ marginBottom: '8px' }}><strong style={{ color: '#5D5C9E' }}>Google Calendar:</strong><br />Impostazioni (⚙️) → Impostazioni → [nome calendario] → Esporta calendari → scarica il file .ics</div>
+                  <div style={{ marginBottom: '8px' }}><strong style={{ color: '#5D5C9E' }}>Apple Calendar:</strong><br />File → Esporta → Esporta… → salva come .ics</div>
+                  <div style={{ marginBottom: '8px' }}><strong style={{ color: '#5D5C9E' }}>Outlook:</strong><br />File → Apri ed esporta → Importa/Esporta → Esporta in file → iCalendar</div>
+                  <div><strong style={{ color: '#5D5C9E' }}>Yahoo Calendar:</strong><br />Azioni → Esporta → scarica il file .ics</div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ marginBottom: '8px' }}><strong style={{ color: '#5D5C9E' }}>Google Calendar:</strong><br />Settings (⚙️) → Settings → [calendar name] → Export calendars → download .ics file</div>
+                  <div style={{ marginBottom: '8px' }}><strong style={{ color: '#5D5C9E' }}>Apple Calendar:</strong><br />File → Export → Export… → save as .ics</div>
+                  <div style={{ marginBottom: '8px' }}><strong style={{ color: '#5D5C9E' }}>Outlook:</strong><br />File → Open & Export → Import/Export → Export to a file → iCalendar</div>
+                  <div><strong style={{ color: '#5D5C9E' }}>Yahoo Calendar:</strong><br />Actions → Export → download .ics file</div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Upload area */}
+          {eventiImport.length === 0 && (
+            <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '24px', borderRadius: '12px', border: '2px dashed #C7C7E8', cursor: 'pointer', background: '#F8F8FF', color: '#5D5C9E' }}>
+              <Upload size={28} />
+              <span style={{ fontSize: '13px', fontWeight: '700' }}>{lang === 'it' ? 'Tocca per scegliere il file .ics' : 'Tap to choose .ics file'}</span>
+              <input type="file" accept=".ics" onChange={handleFileICS} style={{ display: 'none' }} />
+            </label>
+          )}
+
+          {/* Lista eventi trovati */}
+          {eventiImport.length > 0 && (
+            <div>
+              <div style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                {eventiImport.length} {lang === 'it' ? 'eventi trovati' : 'events found'}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px', maxHeight: '200px', overflowY: 'auto' }}>
+                {eventiImport.map(ev => (
+                  <div key={ev.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#F8F9FF', borderRadius: '10px', padding: '10px 12px', border: '1px solid #EEEEF8' }}>
+                    <input type="checkbox" checked={eventiSelezionati.includes(ev.id)}
+                      onChange={() => setEventiSelezionati(prev => prev.includes(ev.id) ? prev.filter(id => id !== ev.id) : [...prev, ev.id])}
+                      style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#5D5C9E' }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '13px', fontWeight: '700', color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.titolo}</div>
+                      <div style={{ fontSize: '11px', color: '#94A3B8' }}>{ev.data}{ev.ora ? ` — ${ev.ora}` : ''}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={() => { setEventiImport([]); setEventiSelezionati([]); }} style={{ flex: 1, background: '#F1F5F9', color: '#64748B', border: 'none', padding: '11px', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: "'Baloo 2', sans-serif", fontSize: '13px' }}>
+                  {lang === 'it' ? 'Annulla' : 'Cancel'}
+                </button>
+                <button onClick={importaEventi} disabled={eventiSelezionati.length === 0} style={{ flex: 2, background: eventiSelezionati.length === 0 ? '#E2E8F0' : '#5D5C9E', color: eventiSelezionati.length === 0 ? '#94A3B8' : 'white', border: 'none', padding: '11px', borderRadius: '12px', fontWeight: '800', cursor: eventiSelezionati.length === 0 ? 'not-allowed' : 'pointer', fontFamily: "'Baloo 2', sans-serif", fontSize: '13px' }}>
+                  {lang === 'it' ? `Importa ${eventiSelezionati.length} eventi` : `Import ${eventiSelezionati.length} events`}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* BANNER COPIA */}
       {appCopiato && (
