@@ -78,6 +78,134 @@ export default function Fatture({ supabase, user, clienti, config, appuntamenti 
     if (!error) { fetchFatture(); fetchPreventivi(); setFatturaAperta(null); setTab('fatture'); }
   };
 
+  const generaXMLFatturaPA = (doc) => {
+    const cliente = clienti.find(c => c.id === doc.cliente_id);
+    const servizi = doc.servizi || [];
+    const subtot = servizi.reduce((a, s) => a + (parseFloat(s.prezzo) || 0) * (parseInt(s.quantita) || 1), 0);
+    const ivaPerc = parseFloat(doc.iva) || 0;
+    const ivaImp = subtot * (ivaPerc / 100);
+    const totale = subtot + ivaImp;
+    const oggi = new Date();
+    const dataDoc = doc.data || oggi.toISOString().split('T')[0];
+    const progressivo = doc.numero?.replace(/[^0-9]/g, '') || '1';
+    const cf = config?.codice_fiscale?.replace(/[^A-Z0-9]/gi, '').toUpperCase() || 'XXXXXXXXXXXXXXX';
+    const piva = cf.replace(/^IT/i, '');
+    const regime = config?.regime_fiscale || 'RF19';
+    const nomeAzienda = (config?.nome_azienda || 'Azienda').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const indirizzo = (config?.indirizzo || 'Via Roma 1').replace(/&/g,'&amp;');
+    const cap = config?.cap || '00100';
+    const citta = (config?.citta || 'Roma').replace(/&/g,'&amp;');
+    const prov = (config?.provincia || 'RM').toUpperCase();
+    const nomeCliente = (cliente?.nome || 'Cliente').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const cfCliente = (cliente?.codice_fiscale || cliente?.piva || '').replace(/[^A-Z0-9]/gi,'').toUpperCase();
+    const sdiCliente = (cliente?.codice_sdi || '0000000').toUpperCase();
+    const pecCliente = cliente?.pec || '';
+    const natura = ivaPerc === 0 ? '<Natura>N2.2</Natura>' : '';
+
+    const righe = servizi.map((s, i) => {
+      const prezzo = parseFloat(s.prezzo) || 0;
+      const qta = parseInt(s.quantita) || 1;
+      const desc = (s.descrizione || s.nome || 'Servizio').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return `    <DettaglioLinee>
+      <NumeroLinea>${i+1}</NumeroLinea>
+      <Descrizione>${desc}</Descrizione>
+      <Quantita>${qta.toFixed(2)}</Quantita>
+      <PrezzoUnitario>${prezzo.toFixed(2)}</PrezzoUnitario>
+      <PrezzoTotale>${(prezzo*qta).toFixed(2)}</PrezzoTotale>
+      <AliquotaIVA>${ivaPerc.toFixed(2)}</AliquotaIVA>
+      ${natura}
+    </DettaglioLinee>`;
+    }).join('
+');
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<p:FatturaElettronica versione="FPR12" xmlns:p="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2">
+  <FatturaElettronicaHeader>
+    <DatiTrasmissione>
+      <IdTrasmittente>
+        <IdPaese>IT</IdPaese>
+        <IdCodice>${piva.substring(0,11).padEnd(11,'0')}</IdCodice>
+      </IdTrasmittente>
+      <ProgressivoInvio>${progressivo.padStart(5,'0')}</ProgressivoInvio>
+      <FormatoTrasmissione>FPR12</FormatoTrasmissione>
+      <CodiceDestinatario>${sdiCliente}</CodiceDestinatario>
+      ${pecCliente ? `<PECDestinatario>${pecCliente}</PECDestinatario>` : ''}
+    </DatiTrasmissione>
+    <CedentePrestatore>
+      <DatiAnagrafici>
+        <IdFiscaleIVA>
+          <IdPaese>IT</IdPaese>
+          <IdCodice>${piva.substring(0,11).padEnd(11,'0')}</IdCodice>
+        </IdFiscaleIVA>
+        <CodiceFiscale>${cf.substring(0,16)}</CodiceFiscale>
+        <Anagrafica>
+          <Nome>${nomeAzienda}</Nome>
+        </Anagrafica>
+        <RegimeFiscale>${regime}</RegimeFiscale>
+      </DatiAnagrafici>
+      <Sede>
+        <Indirizzo>${indirizzo}</Indirizzo>
+        <CAP>${cap}</CAP>
+        <Comune>${citta}</Comune>
+        <Provincia>${prov}</Provincia>
+        <Nazione>IT</Nazione>
+      </Sede>
+    </CedentePrestatore>
+    <CessionarioCommittente>
+      <DatiAnagrafici>
+        ${cfCliente ? `<CodiceFiscale>${cfCliente.substring(0,16)}</CodiceFiscale>` : ''}
+        <Anagrafica>
+          <Nome>${nomeCliente}</Nome>
+        </Anagrafica>
+      </DatiAnagrafici>
+      <Sede>
+        <Indirizzo>-</Indirizzo>
+        <CAP>00000</CAP>
+        <Comune>-</Comune>
+        <Nazione>IT</Nazione>
+      </Sede>
+    </CessionarioCommittente>
+  </FatturaElettronicaHeader>
+  <FatturaElettronicaBody>
+    <DatiGenerali>
+      <DatiGeneraliDocumento>
+        <TipoDocumento>TD01</TipoDocumento>
+        <Divisa>EUR</Divisa>
+        <Data>${dataDoc}</Data>
+        <Numero>${doc.numero}</Numero>
+        <ImportoTotaleDocumento>${totale.toFixed(2)}</ImportoTotaleDocumento>
+      </DatiGeneraliDocumento>
+    </DatiGenerali>
+    <DatiBeniServizi>
+${righe}
+      <DatiRiepilogo>
+        <AliquotaIVA>${ivaPerc.toFixed(2)}</AliquotaIVA>
+        ${natura}
+        <ImponibileImporto>${subtot.toFixed(2)}</ImponibileImporto>
+        <Imposta>${ivaImp.toFixed(2)}</Imposta>
+      </DatiRiepilogo>
+    </DatiBeniServizi>
+    <DatiPagamento>
+      <CondizioniPagamento>TP02</CondizioniPagamento>
+      <DettaglioPagamento>
+        <ModalitaPagamento>MP05</ModalitaPagamento>
+        <DataScadenzaPagamento>${dataDoc}</DataScadenzaPagamento>
+        <ImportoPagamento>${totale.toFixed(2)}</ImportoPagamento>
+        ${config?.iban ? `<IBAN>${config.iban.replace(/\s/g,'')}</IBAN>` : ''}
+      </DettaglioPagamento>
+    </DatiPagamento>
+  </FatturaElettronicaBody>
+</p:FatturaElettronica>`;
+
+    const blob = new Blob([xml], { type: 'application/xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `IT${piva.substring(0,11).padEnd(11,'0')}_${progressivo.padStart(5,'0')}.xml`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const generaHTML = (doc, langOverride, isPreventivo = false) => {
     const isIT = (langOverride || lang) === 'it';
     const curr = isIT ? '€' : '£';
@@ -348,6 +476,11 @@ export default function Fatture({ supabase, user, clienti, config, appuntamenti 
                 <button onClick={() => scaricaImmagineA4(docAperto, isPreventivoAperto)} style={menuItemStyle}><FileText size={16} color="#5D5C9E" /> <span>{lang === 'it' ? 'Salva immagine A4' : 'Save A4 image'}</span></button>
                 <button onClick={() => { setMostraMenu(false); inviaWhatsApp(docAperto, isPreventivoAperto); }} style={menuItemStyle}><MessageCircle size={16} color="#22C55E" /> <span>WhatsApp</span></button>
                 <button onClick={() => { setMostraMenu(false); inviaEmail(docAperto, isPreventivoAperto); }} style={{ ...menuItemStyle, borderBottom: 'none' }}><Mail size={16} color="#3B82F6" /> <span>Email</span></button>
+                {lang === 'it' && !isPreventivoAperto && (
+                  <button onClick={() => { setMostraMenu(false); generaXMLFatturaPA(docAperto); }} style={menuItemStyle}>
+                    <FileText size={16} color="#DC2626" /> <span>Scarica XML FatturaPA</span>
+                  </button>
+                )}
                 {isPreventivoAperto && (
                   <button onClick={() => { setMostraMenu(false); convertiInFattura(docAperto); }} style={{ ...menuItemStyle, borderBottom: 'none', color: '#D97706' }}>
                     <FileText size={16} color="#D97706" /> <span>{lang === 'it' ? 'Converti in fattura' : 'Convert to invoice'}</span>
