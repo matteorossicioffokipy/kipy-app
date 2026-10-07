@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, FileText, Download, Trash2, Mail, Pencil, MessageCircle, ArrowLeft } from 'lucide-react';
+import { Plus, FileText, Download, Trash2, Mail, Pencil, MessageCircle, ArrowLeft, ClipboardList } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 import ModaleFattura from './ModaleFattura';
 
 export default function Fatture({ supabase, user, clienti, config, appuntamenti }) {
   const { t, lang } = useLang();
+  const [tab, setTab] = useState('fatture');
   const [fatture, setFatture] = useState([]);
+  const [preventivi, setPreventivi] = useState([]);
   const [mostraModale, setMostraModale] = useState(false);
   const [fatturaInModifica, setFatturaInModifica] = useState(null);
   const [fatturaAperta, setFatturaAperta] = useState(null);
@@ -19,10 +21,17 @@ export default function Fatture({ supabase, user, clienti, config, appuntamenti 
     setFatture(data || []);
   };
 
-  useEffect(() => { fetchFatture(); }, []);
+  const fetchPreventivi = async () => {
+    const { data } = await supabase.from('preventivi').select('*')
+      .eq('user_id', user.id).order('created_at', { ascending: false });
+    setPreventivi(data || []);
+  };
+
+  useEffect(() => { fetchFatture(); fetchPreventivi(); }, []);
 
   const handleSalva = async (formData) => {
-    const { error } = await supabase.from('fatture').insert([{
+    const table = tab === 'fatture' ? 'fatture' : 'preventivi';
+    const { error } = await supabase.from(table).insert([{
       user_id: user.id,
       numero: formData.numero,
       data: formData.data,
@@ -32,52 +41,64 @@ export default function Fatture({ supabase, user, clienti, config, appuntamenti 
       totale: formData.totale,
       note: formData.note,
     }]);
-    if (!error) { setMostraModale(false); fetchFatture(); }
-    else alert(t('error') + ': ' + error.message);
+    if (!error) { setMostraModale(false); tab === 'fatture' ? fetchFatture() : fetchPreventivi(); }
+    else alert('Errore: ' + error.message);
   };
 
   const handleModifica = async (formData) => {
-    const { error } = await supabase.from('fatture').update({
-      numero: formData.numero,
-      data: formData.data,
-      cliente_id: formData.cliente_id,
-      servizi: formData.servizi,
-      iva: formData.iva,
-      totale: formData.totale,
-      note: formData.note,
+    const table = tab === 'fatture' ? 'fatture' : 'preventivi';
+    const { error } = await supabase.from(table).update({
+      numero: formData.numero, data: formData.data, cliente_id: formData.cliente_id,
+      servizi: formData.servizi, iva: formData.iva, totale: formData.totale, note: formData.note,
     }).eq('id', fatturaInModifica.id);
-    if (!error) { setFatturaInModifica(null); fetchFatture(); }
-    else alert(t('error') + ': ' + error.message);
+    if (!error) { setFatturaInModifica(null); tab === 'fatture' ? fetchFatture() : fetchPreventivi(); }
+    else alert('Errore: ' + error.message);
   };
 
   const elimina = async (id) => {
-    if (!window.confirm(t('delete') + '?')) return;
-    await supabase.from('fatture').delete().eq('id', id);
-    fetchFatture();
+    if (!window.confirm(lang === 'it' ? 'Eliminare?' : 'Delete?')) return;
+    const table = tab === 'fatture' ? 'fatture' : 'preventivi';
+    await supabase.from(table).delete().eq('id', id);
+    tab === 'fatture' ? fetchFatture() : fetchPreventivi();
   };
 
-  const generaHTML = (fattura, langOverride) => {
+  const convertiInFattura = async (preventivo) => {
+    if (!window.confirm(lang === 'it' ? 'Convertire in fattura?' : 'Convert to invoice?')) return;
+    const nextNum = String(fatture.length + 1).padStart(3, '0');
+    const { error } = await supabase.from('fatture').insert([{
+      user_id: user.id,
+      numero: `${new Date().getFullYear()}-${nextNum}`,
+      data: preventivo.data,
+      cliente_id: preventivo.cliente_id,
+      servizi: preventivo.servizi,
+      iva: preventivo.iva,
+      totale: preventivo.totale,
+      note: preventivo.note,
+    }]);
+    if (!error) { fetchFatture(); fetchPreventivi(); setFatturaAperta(null); setTab('fatture'); }
+  };
+
+  const generaHTML = (doc, langOverride, isPreventivo = false) => {
     const isIT = (langOverride || lang) === 'it';
     const curr = isIT ? '€' : '£';
-    const cliente = clienti.find(c => c.id === fattura.cliente_id);
-    const servizi = fattura.servizi || [];
+    const cliente = clienti.find(c => c.id === doc.cliente_id);
+    const servizi = doc.servizi || [];
     const subtot = servizi.reduce((a, s) => a + (parseFloat(s.prezzo) || 0) * (parseInt(s.quantita) || 1), 0);
-    const ivaImp = subtot * (fattura.iva / 100);
+    const ivaImp = subtot * (doc.iva / 100);
     const firma = config?.firma || '';
-
-    // Colore richiamo cliente: ultimo appuntamento confermato del cliente
     const appCliente = (appuntamenti || [])
       .filter(a => cliente && a.titolo?.toLowerCase().includes(cliente.nome?.toLowerCase()) && a.colore)
       .sort((a, b) => b.data.localeCompare(a.data));
     const accentColor = appCliente[0]?.colore || '#5D5C9E';
-    const accentDark = accentColor;
+    const titoloDoc = isPreventivo ? (isIT ? 'PREVENTIVO' : 'QUOTE') : (isIT ? 'FATTURA' : 'INVOICE');
+    const statusLabel = isPreventivo ? (isIT ? 'In attesa' : 'Pending') : (isIT ? 'Emessa' : 'Issued');
 
     return `<!DOCTYPE html>
 <html lang="${isIT ? 'it' : 'en'}">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>${isIT ? 'Fattura' : 'Invoice'} #${fattura.numero}</title>
+  <title>${titoloDoc} #${doc.numero}</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -127,6 +148,9 @@ export default function Fatture({ supabase, user, clienti, config, appuntamenti 
     .notes-box { background:#FFFBEB; border:1px solid #FDE68A; border-radius:12px; padding:14px 18px; margin-bottom:24px; }
     .notes-label { font-size:10px; color:#92400E; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; font-weight:700; }
     .notes-box p { font-size:12px; color:#78350F; line-height:1.6; }
+    .validity-box { background:#EEF8F2; border:1px solid #BBF7D0; border-radius:12px; padding:14px 18px; margin-bottom:24px; }
+    .validity-label { font-size:10px; color:#15803D; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; font-weight:700; }
+    .validity-box p { font-size:12px; color:#15803D; line-height:1.6; }
     .firma-box { margin-top:40px; display:flex; justify-content:flex-end; }
     .firma-inner { text-align:center; min-width:200px; }
     .firma-label { font-size:10px; color:#94A3B8; text-transform:uppercase; letter-spacing:1px; margin-bottom:14px; }
@@ -141,21 +165,13 @@ export default function Fatture({ supabase, user, clienti, config, appuntamenti 
       .company-info { text-align:left; }
       .title-row { flex-direction:column; gap:12px; align-items:flex-start; }
       .invoice-label { font-size:28px; }
-      .invoice-badge { text-align:left; padding:8px 14px; }
-      .invoice-badge .num-value { font-size:16px; }
       .meta-row { flex-direction:column; gap:8px; }
       .parties { grid-template-columns:1fr; gap:10px; }
-      table { font-size:12px; }
-      th { padding:9px 8px; font-size:10px; }
-      td { padding:9px 8px; font-size:12px; }
       th:nth-child(3), td:nth-child(3) { display:none; }
       .totals-wrapper { justify-content:stretch; }
       .totals-box { width:100%; }
-      .total-final { font-size:15px; padding:10px 14px; }
-      .payment-box { padding:12px 14px; }
-      .payment-row { flex-direction:column; gap:10px; }
-      .firma-box { justify-content:center; }
     }
+    @media print { body { background:white; } .page { padding:32px 40px; } }
   </style>
 </head>
 <body>
@@ -171,21 +187,18 @@ export default function Fatture({ supabase, user, clienti, config, appuntamenti 
       ${config?.iban ? `<p>IBAN: ${config.iban}</p>` : ''}
     </div>
   </div>
-
   <div class="title-row">
-    <div class="invoice-label">${isIT ? 'FATTURA' : 'INVOICE'}</div>
+    <div class="invoice-label">${titoloDoc}</div>
     <div class="invoice-badge">
       <div class="num-label">${isIT ? 'Numero' : 'Number'}</div>
-      <div class="num-value">#${fattura.numero}</div>
+      <div class="num-value">#${doc.numero}</div>
     </div>
   </div>
-
   <div class="meta-row">
-    <div class="meta-box"><div class="label">${isIT ? 'Data emissione' : 'Issue date'}</div><div class="value">${new Date(fattura.data).toLocaleDateString('en-GB')}</div></div>
-    <div class="meta-box"><div class="label">Status</div><div class="value" style="color:#15803D;">✓ ${isIT ? 'Emessa' : 'Issued'}</div></div>
-    ${fattura.iva > 0 ? `<div class="meta-box"><div class="label">IVA / VAT</div><div class="value">${fattura.iva}%</div></div>` : ''}
+    <div class="meta-box"><div class="label">${isIT ? 'Data emissione' : 'Issue date'}</div><div class="value">${new Date(doc.data).toLocaleDateString('en-GB')}</div></div>
+    <div class="meta-box"><div class="label">Status</div><div class="value" style="color:${isPreventivo ? '#D97706' : '#15803D'};">${isPreventivo ? '⏳' : '✓'} ${statusLabel}</div></div>
+    ${doc.iva > 0 ? `<div class="meta-box"><div class="label">IVA / VAT</div><div class="value">${doc.iva}%</div></div>` : ''}
   </div>
-
   <div class="parties">
     <div class="party-box">
       <div class="party-label">${isIT ? 'Da' : 'From'}</div>
@@ -194,14 +207,13 @@ export default function Fatture({ supabase, user, clienti, config, appuntamenti 
       ${config?.codice_fiscale ? `<p>${isIT ? 'P.IVA / C.F.' : 'VAT No.'}: ${config.codice_fiscale}</p>` : ''}
     </div>
     <div class="party-box">
-      <div class="party-label">${isIT ? 'Fatturato a' : 'Billed to'}</div>
+      <div class="party-label">${isIT ? (isPreventivo ? 'Preventivo per' : 'Fatturato a') : (isPreventivo ? 'Quote for' : 'Billed to')}</div>
       <div class="party-name">${cliente?.nome || ''}</div>
       ${cliente?.email ? `<p>${cliente.email}</p>` : ''}
       ${cliente?.tel ? `<p>${cliente.tel}</p>` : ''}
       ${cliente?.indirizzo ? `<p>${cliente.indirizzo}</p>` : ''}
     </div>
   </div>
-
   <table>
     <thead><tr>
       <th>${isIT ? 'Descrizione' : 'Description'}</th>
@@ -218,243 +230,196 @@ export default function Fatture({ supabase, user, clienti, config, appuntamenti 
       </tr>`).join('')}
     </tbody>
   </table>
-
   <div class="totals-wrapper">
     <div class="totals-box">
       <div class="total-row"><span>${isIT ? 'Subtotale' : 'Subtotal'}</span><span>${curr}${subtot.toFixed(2)}</span></div>
-      ${fattura.iva > 0 ? `<div class="total-row"><span>IVA/VAT ${fattura.iva}%</span><span>${curr}${ivaImp.toFixed(2)}</span></div>` : ''}
-      <div class="total-final"><span>${isIT ? 'TOTALE' : 'TOTAL'}</span><span>${curr}${fattura.totale.toFixed(2)}</span></div>
+      ${doc.iva > 0 ? `<div class="total-row"><span>IVA/VAT ${doc.iva}%</span><span>${curr}${ivaImp.toFixed(2)}</span></div>` : ''}
+      <div class="total-final"><span>${isIT ? 'TOTALE' : 'TOTAL'}</span><span>${curr}${parseFloat(doc.totale).toFixed(2)}</span></div>
     </div>
   </div>
-
-  ${(config?.iban || config?.nome_banca || config?.link_pagamento) ? `
-  <div class="payment-box">
-    <div class="payment-label">${isIT ? 'Dettagli pagamento' : 'Payment details'}</div>
-    <div class="payment-row">
-      ${config?.iban ? `<div class="payment-item"><div class="pi-label">IBAN</div><div class="pi-value">${config.iban}</div></div>` : ''}
-      ${config?.nome_banca ? `<div class="payment-item"><div class="pi-label">${isIT ? 'Banca' : 'Bank'}</div><div class="pi-value">${config.nome_banca}</div></div>` : ''}
-      ${config?.codice_fiscale ? `<div class="payment-item"><div class="pi-label">${isIT ? 'P.IVA / C.F.' : 'VAT / Co. No.'}</div><div class="pi-value">${config.codice_fiscale}</div></div>` : ''}
-    </div>
-  </div>` : ''}
-
-  ${fattura.note ? `<div class="notes-box"><div class="notes-label">${isIT ? 'Note' : 'Notes'}</div><p>${fattura.note}</p></div>` : ''}
-
+  ${isPreventivo ? `<div class="validity-box"><div class="validity-label">${isIT ? 'Validità preventivo' : 'Quote validity'}</div><p>${isIT ? 'Il presente preventivo ha validità 30 giorni dalla data di emissione.' : 'This quote is valid for 30 days from the issue date.'}</p></div>` : ''}
+  ${(config?.iban || config?.nome_banca) ? `<div class="payment-box"><div class="payment-label">${isIT ? 'Dettagli pagamento' : 'Payment details'}</div><div class="payment-row">${config?.iban ? `<div class="payment-item"><div class="pi-label">IBAN</div><div class="pi-value">${config.iban}</div></div>` : ''}${config?.nome_banca ? `<div class="payment-item"><div class="pi-label">${isIT ? 'Banca' : 'Bank'}</div><div class="pi-value">${config.nome_banca}</div></div>` : ''}${config?.codice_fiscale ? `<div class="payment-item"><div class="pi-label">${isIT ? 'P.IVA / C.F.' : 'VAT / Co. No.'}</div><div class="pi-value">${config.codice_fiscale}</div></div>` : ''}</div></div>` : ''}
+  ${doc.note ? `<div class="notes-box"><div class="notes-label">${isIT ? 'Note' : 'Notes'}</div><p>${doc.note}</p></div>` : ''}
   ${firma ? `<div class="firma-box"><div class="firma-inner"><div class="firma-label">${isIT ? 'Firma' : 'Signature'}</div><div class="firma-text">${firma}</div><div class="firma-name">${config?.nome_azienda || ''}</div></div></div>` : ''}
-
   <div class="footer"><p>Generated with <span class="kipri">KIPRI</span> · your business in your pocket</p></div>
 </div>
 </body>
 </html>`;
   };
 
-  const scaricaImmagine = async (fattura) => {
-    setMostraMenu(false);
-    setScaricando(true);
-    try {
-      const { default: html2canvas } = await import('html2canvas');
-      const html = generaHTML(fattura, lang);
-      const container = document.createElement('div');
-      container.style.cssText = 'position:fixed;top:-9999px;left:0;width:390px;background:white;z-index:-1;';
-      container.innerHTML = html;
-      document.body.appendChild(container);
-      await new Promise(r => setTimeout(r, 800));
-      const page = container.querySelector('.page') || container;
-      const canvas = await html2canvas(page, {
-        scale: 2, useCORS: true, backgroundColor: '#ffffff',
-        width: page.scrollWidth, height: page.scrollHeight, windowWidth: 390,
-      });
-      document.body.removeChild(container);
-      const link = document.createElement('a');
-      link.download = `fattura-${fattura.numero}.jpg`;
-      link.href = canvas.toDataURL('image/jpeg', 0.95);
-      link.click();
-    } catch (err) {
-      console.error(err);
-      alert(lang === 'it' ? 'Errore nel salvataggio. Riprova.' : 'Error saving. Please try again.');
-    }
-    setScaricando(false);
-  };
-
-  const scaricaPDF = async (fattura) => {
-    setMostraMenu(false);
-    setScaricando(true);
+  const scaricaPDF = async (doc, isPreventivo = false) => {
+    setMostraMenu(false); setScaricando(true);
     try {
       const { default: jsPDF } = await import('jspdf');
       const { default: html2canvas } = await import('html2canvas');
-
-      const html = generaHTML(fattura, lang);
+      const html = generaHTML(doc, lang, isPreventivo);
       const container = document.createElement('div');
       container.style.cssText = 'position:fixed;top:-9999px;left:0;width:794px;background:white;z-index:-1;';
       container.innerHTML = html;
       document.body.appendChild(container);
       await new Promise(r => setTimeout(r, 800));
-
       const page = container.querySelector('.page') || container;
-      const canvas = await html2canvas(page, {
-        scale: 2, useCORS: true, backgroundColor: '#ffffff',
-        width: 794, windowWidth: 794,
-      });
+      const canvas = await html2canvas(page, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794, windowWidth: 794 });
       document.body.removeChild(container);
-
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const imgData = canvas.toDataURL('image/png');
       const pdfW = pdf.internal.pageSize.getWidth();
       const pdfH = pdf.internal.pageSize.getHeight();
       const imgH = (canvas.height * pdfW) / canvas.width;
-
-      let posY = 0;
-      let remaining = imgH;
-      let first = true;
+      let posY = 0, remaining = imgH, first = true;
       while (remaining > 0) {
         if (!first) pdf.addPage();
         pdf.addImage(imgData, 'PNG', 0, -posY, pdfW, imgH);
-        posY += pdfH;
-        remaining -= pdfH;
-        first = false;
+        posY += pdfH; remaining -= pdfH; first = false;
       }
-      pdf.save(`fattura-${fattura.numero}.pdf`);
+      const prefix = isPreventivo ? (lang === 'it' ? 'preventivo' : 'quote') : (lang === 'it' ? 'fattura' : 'invoice');
+      pdf.save(`${prefix}-${doc.numero}.pdf`);
     } catch (err) {
-      console.error(err);
-      const html = generaHTML(fattura, lang);
+      const html = generaHTML(doc, lang, isPreventivo);
       const win = window.open('', '_blank');
-      if (win) { win.document.write(html); win.document.close(); win.onload = () => { win.print(); }; }
+      if (win) { win.document.write(html); win.document.close(); win.onload = () => win.print(); }
     }
     setScaricando(false);
   };
 
-  const scaricaImmagineA4 = async (fattura) => {
-    setMostraMenu(false);
-    setScaricando(true);
+  const scaricaImmagineA4 = async (doc, isPreventivo = false) => {
+    setMostraMenu(false); setScaricando(true);
     try {
       const { default: html2canvas } = await import('html2canvas');
-      const html = generaHTML(fattura, lang);
+      const html = generaHTML(doc, lang, isPreventivo);
       const container = document.createElement('div');
       container.style.cssText = 'position:fixed;top:-9999px;left:0;width:794px;background:white;z-index:-1;';
       container.innerHTML = html;
       document.body.appendChild(container);
       await new Promise(r => setTimeout(r, 800));
       const page = container.querySelector('.page') || container;
-      // A4 ratio: 794 x 1123px
-      const canvas = await html2canvas(page, {
-        scale: 2, useCORS: true, backgroundColor: '#ffffff',
-        width: 794, windowWidth: 794,
-      });
+      const canvas = await html2canvas(page, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794, windowWidth: 794 });
       document.body.removeChild(container);
       const link = document.createElement('a');
-      link.download = `fattura-${fattura.numero}.jpg`;
+      const prefix = isPreventivo ? (lang === 'it' ? 'preventivo' : 'quote') : (lang === 'it' ? 'fattura' : 'invoice');
+      link.download = `${prefix}-${doc.numero}.jpg`;
       link.href = canvas.toDataURL('image/jpeg', 0.95);
       link.click();
-    } catch (err) {
-      console.error(err);
-      alert(lang === 'it' ? 'Errore. Riprova.' : 'Error. Please try again.');
-    }
+    } catch (err) { console.error(err); }
     setScaricando(false);
   };
 
-  const inviaWhatsApp = (fattura) => {
-    const cliente = clienti.find(c => c.id === fattura.cliente_id);
+  const inviaWhatsApp = (doc, isPreventivo = false) => {
+    const cliente = clienti.find(c => c.id === doc.cliente_id);
     const tel = cliente?.tel?.replace(/\D/g, '');
-    const testo = lang === 'it'
-      ? `Ciao ${cliente?.nome || ''}! 👋\nEcco la tua fattura #${fattura.numero} di ${currency}${parseFloat(fattura.totale).toFixed(2)}.\n\nGrazie!\n— ${config?.nome_azienda || ''}`
-      : `Hi ${cliente?.nome || ''}! 👋\nPlease find your invoice #${fattura.numero} for ${currency}${parseFloat(fattura.totale).toFixed(2)}.\n\nThank you!\n— ${config?.nome_azienda || ''}`;
-    const encoded = encodeURIComponent(testo);
-    if (tel) window.open(`https://wa.me/${tel}?text=${encoded}`, '_blank');
-    else window.open(`https://wa.me/?text=${encoded}`, '_blank');
+    const testo = isPreventivo
+      ? (lang === 'it' ? `Ciao ${cliente?.nome || ''}! 👋\nTi invio il preventivo #${doc.numero} di ${currency}${parseFloat(doc.totale).toFixed(2)}.\n\nA presto!\n— ${config?.nome_azienda || ''}` : `Hi ${cliente?.nome || ''}! 👋\nPlease find your quote #${doc.numero} for ${currency}${parseFloat(doc.totale).toFixed(2)}.\n\nBest regards,\n— ${config?.nome_azienda || ''}`)
+      : (lang === 'it' ? `Ciao ${cliente?.nome || ''}! 👋\nEcco la tua fattura #${doc.numero} di ${currency}${parseFloat(doc.totale).toFixed(2)}.\n\nGrazie!\n— ${config?.nome_azienda || ''}` : `Hi ${cliente?.nome || ''}! 👋\nPlease find your invoice #${doc.numero} for ${currency}${parseFloat(doc.totale).toFixed(2)}.\n\nThank you!\n— ${config?.nome_azienda || ''}`);
+    if (tel) window.open(`https://wa.me/${tel}?text=${encodeURIComponent(testo)}`, '_blank');
+    else window.open(`https://wa.me/?text=${encodeURIComponent(testo)}`, '_blank');
   };
 
-  const inviaEmail = (fattura) => {
-    const cliente = clienti.find(c => c.id === fattura.cliente_id);
-    if (!cliente?.email) { alert(lang === 'it' ? "Questo cliente non ha un'email." : 'This client has no email.'); return; }
-    const subject = encodeURIComponent(`${lang === 'it' ? 'Fattura' : 'Invoice'} #${fattura.numero} - ${config?.nome_azienda || 'KIPRI'}`);
-    const body = encodeURIComponent(lang === 'it'
-      ? `Ciao ${cliente.nome},\n\nIn allegato trovi la fattura #${fattura.numero} di ${currency}${parseFloat(fattura.totale).toFixed(2)}.\n\nGrazie,\n${config?.nome_azienda || ''}`
-      : `Hi ${cliente.nome},\n\nPlease find attached invoice #${fattura.numero} for ${currency}${parseFloat(fattura.totale).toFixed(2)}.\n\nThank you,\n${config?.nome_azienda || ''}`);
+  const inviaEmail = (doc, isPreventivo = false) => {
+    const cliente = clienti.find(c => c.id === doc.cliente_id);
+    if (!cliente?.email) { alert(lang === 'it' ? "Nessuna email per questo cliente." : 'No email for this client.'); return; }
+    const subject = encodeURIComponent(isPreventivo
+      ? `${lang === 'it' ? 'Preventivo' : 'Quote'} #${doc.numero} - ${config?.nome_azienda || 'KIPRI'}`
+      : `${lang === 'it' ? 'Fattura' : 'Invoice'} #${doc.numero} - ${config?.nome_azienda || 'KIPRI'}`);
+    const body = encodeURIComponent(isPreventivo
+      ? (lang === 'it' ? `Ciao ${cliente.nome},\n\nIn allegato trovi il preventivo #${doc.numero} di ${currency}${parseFloat(doc.totale).toFixed(2)}.\n\nGrazie,\n${config?.nome_azienda || ''}` : `Hi ${cliente.nome},\n\nPlease find attached quote #${doc.numero} for ${currency}${parseFloat(doc.totale).toFixed(2)}.\n\nBest regards,\n${config?.nome_azienda || ''}`)
+      : (lang === 'it' ? `Ciao ${cliente.nome},\n\nIn allegato trovi la fattura #${doc.numero} di ${currency}${parseFloat(doc.totale).toFixed(2)}.\n\nGrazie,\n${config?.nome_azienda || ''}` : `Hi ${cliente.nome},\n\nPlease find attached invoice #${doc.numero} for ${currency}${parseFloat(doc.totale).toFixed(2)}.\n\nThank you,\n${config?.nome_azienda || ''}`));
     window.location.href = `mailto:${cliente.email}?subject=${subject}&body=${body}`;
   };
 
-  // Vista fattura aperta
-  if (fatturaAperta) {
-    const html = generaHTML(fatturaAperta, lang);
+  const docAperto = fatturaAperta;
+  const isPreventivoAperto = docAperto && tab === 'preventivi';
+
+  if (docAperto) {
+    const html = generaHTML(docAperto, lang, isPreventivoAperto);
     return (
       <div style={{ fontFamily: "'Baloo 2', sans-serif" }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-          <button onClick={() => { setFatturaAperta(null); setMostraMenu(false); }} style={{ background: '#F1F5F9', border: 'none', borderRadius: '12px', padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Baloo 2',sans-serif", fontWeight: '700', fontSize: '13px', color: '#64748B' }}>
+          <button onClick={() => setFatturaAperta(null)} style={{ background: '#F1F5F9', border: 'none', borderRadius: '12px', padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Baloo 2',sans-serif", fontWeight: '700', fontSize: '13px', color: '#64748B' }}>
             <ArrowLeft size={15} /> {lang === 'it' ? 'Indietro' : 'Back'}
           </button>
           <div style={{ position: 'relative' }}>
-            <button
-              onClick={() => setMostraMenu(!mostraMenu)}
-              disabled={scaricando}
-              style={{ background: '#5D5C9E', border: 'none', borderRadius: '12px', padding: '10px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Baloo 2',sans-serif", fontWeight: '700', fontSize: '14px', color: 'white', opacity: scaricando ? 0.6 : 1 }}
-            >
+            <button onClick={() => setMostraMenu(!mostraMenu)} disabled={scaricando} style={{ background: '#5D5C9E', border: 'none', borderRadius: '12px', padding: '10px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: "'Baloo 2',sans-serif", fontWeight: '700', fontSize: '14px', color: 'white', opacity: scaricando ? 0.6 : 1 }}>
               {scaricando ? '...' : (lang === 'it' ? 'Condividi ▾' : 'Share ▾')}
             </button>
+            {mostraMenu && <div onClick={() => setMostraMenu(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99 }} />}
             {mostraMenu && (
-              <div onClick={() => setMostraMenu(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99 }} />
-            )}
-            {mostraMenu && (
-              <div style={{ position: 'absolute', right: 0, top: '52px', background: 'white', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', border: '1px solid #F1F5F9', zIndex: 100, minWidth: '180px', overflow: 'hidden' }}>
-                <button onClick={() => scaricaPDF(fatturaAperta)} style={menuItemStyle}>
-                  <Download size={16} color="#15803D" /> <span>{lang === 'it' ? 'Scarica PDF' : 'Download PDF'}</span>
-                </button>
-                <button onClick={() => scaricaImmagineA4(fatturaAperta)} style={menuItemStyle}>
-                  <FileText size={16} color="#5D5C9E" /> <span>{lang === 'it' ? 'Salva come immagine A4' : 'Save as A4 image'}</span>
-                </button>
-                <button onClick={() => { setMostraMenu(false); inviaWhatsApp(fatturaAperta); }} style={menuItemStyle}>
-                  <MessageCircle size={16} color="#22C55E" /> <span>WhatsApp</span>
-                </button>
-                <button onClick={() => { setMostraMenu(false); inviaEmail(fatturaAperta); }} style={{ ...menuItemStyle, borderBottom: 'none' }}>
-                  <Mail size={16} color="#3B82F6" /> <span>Email</span>
-                </button>
+              <div style={{ position: 'absolute', right: 0, top: '52px', background: 'white', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', border: '1px solid #F1F5F9', zIndex: 100, minWidth: '190px', overflow: 'hidden' }}>
+                <button onClick={() => scaricaPDF(docAperto, isPreventivoAperto)} style={menuItemStyle}><Download size={16} color="#15803D" /> <span>{lang === 'it' ? 'Scarica PDF' : 'Download PDF'}</span></button>
+                <button onClick={() => scaricaImmagineA4(docAperto, isPreventivoAperto)} style={menuItemStyle}><FileText size={16} color="#5D5C9E" /> <span>{lang === 'it' ? 'Salva immagine A4' : 'Save A4 image'}</span></button>
+                <button onClick={() => { setMostraMenu(false); inviaWhatsApp(docAperto, isPreventivoAperto); }} style={menuItemStyle}><MessageCircle size={16} color="#22C55E" /> <span>WhatsApp</span></button>
+                <button onClick={() => { setMostraMenu(false); inviaEmail(docAperto, isPreventivoAperto); }} style={{ ...menuItemStyle, borderBottom: 'none' }}><Mail size={16} color="#3B82F6" /> <span>Email</span></button>
+                {isPreventivoAperto && (
+                  <button onClick={() => { setMostraMenu(false); convertiInFattura(docAperto); }} style={{ ...menuItemStyle, borderBottom: 'none', color: '#D97706' }}>
+                    <FileText size={16} color="#D97706" /> <span>{lang === 'it' ? 'Converti in fattura' : 'Convert to invoice'}</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
         </div>
-        <iframe srcDoc={html} style={{ width: '100%', height: '72vh', border: '1px solid #E2E8F0', borderRadius: '16px' }} title="fattura" />
+        <iframe srcDoc={html} style={{ width: '100%', height: '72vh', border: '1px solid #E2E8F0', borderRadius: '16px' }} title="documento" />
       </div>
     );
   }
 
+  const lista = tab === 'fatture' ? fatture : preventivi;
+  const isPreventivo = tab === 'preventivi';
+
   return (
     <div style={{ fontFamily: "'Baloo 2', sans-serif" }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: '#1E293B' }}>{t('fatture_title')}</h2>
-          <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#94A3B8' }}>{fatture.length} {t('fatture_emesse')}</p>
+          <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: '#1E293B' }}>
+            {lang === 'it' ? 'Fatture & Preventivi' : 'Invoices & Quotes'}
+          </h2>
+          <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#94A3B8' }}>
+            {lista.length} {isPreventivo ? (lang === 'it' ? 'preventivi' : 'quotes') : (lang === 'it' ? 'fatture emesse' : 'invoices issued')}
+          </p>
         </div>
         <button onClick={() => setMostraModale(true)} style={addBtn}><Plus size={20} /></button>
       </div>
 
-      {fatture.length === 0 ? (
+      <div style={{ display: 'flex', gap: '4px', background: '#F1F5F9', padding: '4px', borderRadius: '14px', marginBottom: '16px' }}>
+        <button onClick={() => setTab('fatture')} style={{ flex: 1, border: 'none', background: tab === 'fatture' ? '#5D5C9E' : 'transparent', color: tab === 'fatture' ? 'white' : '#64748B', padding: '9px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '13px', fontFamily: "'Baloo 2', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+          <FileText size={14} /> {lang === 'it' ? 'Fatture' : 'Invoices'}
+        </button>
+        <button onClick={() => setTab('preventivi')} style={{ flex: 1, border: 'none', background: tab === 'preventivi' ? '#D97706' : 'transparent', color: tab === 'preventivi' ? 'white' : '#64748B', padding: '9px', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '13px', fontFamily: "'Baloo 2', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+          <ClipboardList size={14} /> {lang === 'it' ? 'Preventivi' : 'Quotes'}
+        </button>
+      </div>
+
+      {lista.length === 0 ? (
         <div style={emptyStyle}>
-          <FileText size={32} color="#CBD5E1" />
-          <p style={{ margin: '10px 0 16px', color: '#94A3B8', fontSize: '14px' }}>{t('fatture_empty')}</p>
-          <button onClick={() => setMostraModale(true)} style={{ ...addBtn, width: 'auto', padding: '10px 20px', borderRadius: '12px', fontSize: '14px', fontFamily: "'Baloo 2',sans-serif" }}>
-            {lang === 'it' ? '+ Nuova fattura' : '+ New invoice'}
+          {isPreventivo ? <ClipboardList size={32} color="#CBD5E1" /> : <FileText size={32} color="#CBD5E1" />}
+          <p style={{ margin: '10px 0 16px', color: '#94A3B8', fontSize: '14px' }}>
+            {isPreventivo ? (lang === 'it' ? 'Nessun preventivo ancora' : 'No quotes yet') : (lang === 'it' ? 'Nessuna fattura ancora' : 'No invoices yet')}
+          </p>
+          <button onClick={() => setMostraModale(true)} style={{ ...addBtn, width: 'auto', padding: '10px 20px', borderRadius: '12px', fontSize: '14px', fontFamily: "'Baloo 2',sans-serif", background: isPreventivo ? '#D97706' : '#5D5C9E' }}>
+            {isPreventivo ? (lang === 'it' ? '+ Nuovo preventivo' : '+ New quote') : (lang === 'it' ? '+ Nuova fattura' : '+ New invoice')}
           </button>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {fatture.map(f => {
+          {lista.map(f => {
             const cliente = clienti.find(c => c.id === f.cliente_id);
             return (
-              <div key={f.id} style={{ ...cardStyle, cursor: 'pointer' }} onClick={() => setFatturaAperta(f)}>
+              <div key={f.id} style={{ ...cardStyle, cursor: 'pointer', borderLeft: `4px solid ${isPreventivo ? '#D97706' : '#5D5C9E'}` }} onClick={() => setFatturaAperta(f)}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: '700', color: '#5D5C9E', background: '#EEEEF8', padding: '2px 10px', borderRadius: '20px' }}>#{f.numero}</span>
+                      <span style={{ fontSize: '12px', fontWeight: '700', color: isPreventivo ? '#D97706' : '#5D5C9E', background: isPreventivo ? '#FFFBEB' : '#EEEEF8', padding: '2px 10px', borderRadius: '20px' }}>#{f.numero}</span>
                       <span style={{ fontSize: '11px', color: '#94A3B8' }}>{new Date(f.data).toLocaleDateString('en-GB')}</span>
+                      {isPreventivo && <span style={{ fontSize: '10px', color: '#D97706', background: '#FFFBEB', padding: '1px 8px', borderRadius: '10px', fontWeight: '700' }}>⏳ {lang === 'it' ? 'In attesa' : 'Pending'}</span>}
                     </div>
                     <div style={{ fontSize: '15px', fontWeight: '800', color: '#1E293B' }}>
-                      {cliente?.nome || (lang === 'it' ? 'Cliente eliminato' : 'Client deleted')}
+                      {cliente?.nome || (lang === 'it' ? 'Cliente eliminato' : 'Deleted client')}
                     </div>
-                    {f.iva > 0 && <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>{t('fatture_ivaIncluded')} {f.iva}%</div>}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
-                    <span style={{ fontSize: '18px', fontWeight: '800', color: '#5D5C9E' }}>{currency}{parseFloat(f.totale).toFixed(2)}</span>
+                    <span style={{ fontSize: '18px', fontWeight: '800', color: isPreventivo ? '#D97706' : '#5D5C9E' }}>{currency}{parseFloat(f.totale).toFixed(2)}</span>
                     <div style={{ display: 'flex', gap: '6px' }} onClick={e => e.stopPropagation()}>
-                      <button onClick={() => setFatturaInModifica(f)} title={lang === 'it' ? 'Modifica' : 'Edit'} style={iconBtn('#EEEEF8', '#5D5C9E')}><Pencil size={14} /></button>
-                      <button onClick={() => elimina(f.id)} title={lang === 'it' ? 'Elimina' : 'Delete'} style={iconBtn('#FEF2F2', '#EF4444')}><Trash2 size={14} /></button>
+                      <button onClick={() => setFatturaInModifica(f)} style={iconBtn('#EEEEF8', '#5D5C9E')}><Pencil size={14} /></button>
+                      <button onClick={() => elimina(f.id)} style={iconBtn('#FEF2F2', '#EF4444')}><Trash2 size={14} /></button>
                     </div>
                   </div>
                 </div>
@@ -465,10 +430,10 @@ export default function Fatture({ supabase, user, clienti, config, appuntamenti 
       )}
 
       {mostraModale && (
-        <ModaleFattura clienti={clienti} fattureCount={fatture.length} config={config} appuntamenti={appuntamenti} onSalva={handleSalva} onAnnulla={() => setMostraModale(false)} />
+        <ModaleFattura clienti={clienti} fattureCount={isPreventivo ? preventivi.length : fatture.length} config={config} appuntamenti={appuntamenti} onSalva={handleSalva} onAnnulla={() => setMostraModale(false)} isPreventivo={isPreventivo} />
       )}
       {fatturaInModifica && (
-        <ModaleFattura clienti={clienti} fattureCount={fatture.length} config={config} appuntamenti={appuntamenti} fatturaInModifica={fatturaInModifica} onSalva={handleModifica} onAnnulla={() => setFatturaInModifica(null)} />
+        <ModaleFattura clienti={clienti} fattureCount={isPreventivo ? preventivi.length : fatture.length} config={config} appuntamenti={appuntamenti} fatturaInModifica={fatturaInModifica} onSalva={handleModifica} onAnnulla={() => setFatturaInModifica(null)} isPreventivo={isPreventivo} />
       )}
     </div>
   );
