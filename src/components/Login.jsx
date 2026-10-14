@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { Mail, Lock, LogIn, KeyRound, ArrowLeft, UserPlus, Eye, EyeOff, User } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Mail, Lock, LogIn, KeyRound, ArrowLeft, UserPlus, Eye, EyeOff, User, Building2, Phone, Image, ChevronRight, SkipForward } from 'lucide-react';
 import { useLang } from '../LanguageContext';
+import mascotSaluto from '../assets/mascot-saluto.png';
+import mascot25 from '../assets/mascot-25.png';
+import mascot28 from '../assets/mascot-28.png';
+import mascot30 from '../assets/mascot-30.png';
+import mascot23 from '../assets/mascot-23.png';
 
 export default function Login({ supabase, logo }) {
   const { t, lang, switchLang } = useLang();
   const [email, setEmail]                   = useState('');
   const [password, setPassword]             = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [nome, setNome]                     = useState('');
-  const [cognome, setCognome]               = useState('');
   const [loading, setLoading]               = useState(false);
   const [rimaniConnesso, setRimaniConnesso] = useState(true);
   const [showSplash, setShowSplash]         = useState(true);
@@ -20,7 +23,16 @@ export default function Login({ supabase, logo }) {
   const [showConfirmPwd, setShowConfirmPwd] = useState(false);
   const [showLoginPwd, setShowLoginPwd]     = useState(false);
 
-  // Rileva lingua da URL o localStorage
+  // Onboarding multi-step state
+  const [step, setStep]           = useState(1);
+  const [nome, setNome]           = useState('');
+  const [cognome, setCognome]     = useState('');
+  const [nomeAzienda, setNomeAzienda] = useState('');
+  const [telefono, setTelefono]   = useState('');
+  const [logoFile, setLogoFile]   = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
+  const logoInputRef = useRef(null);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlLang = params.get('lang');
@@ -51,24 +63,49 @@ export default function Login({ supabase, logo }) {
     setLoading(false);
   };
 
-  const handleSignup = async (e) => {
-    e.preventDefault();
-    if (!nome.trim()) return alert(isEn ? 'Please enter your first name.' : 'Inserisci il tuo nome.');
-    if (!cognome.trim()) return alert(isEn ? 'Please enter your last name.' : 'Inserisci il tuo cognome.');
+  const handleLogoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setLogoFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setLogoPreview(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleSignup = async () => {
     if (password.length < 6) return alert(isEn ? 'Password must be at least 6 characters.' : 'La password deve essere di almeno 6 caratteri.');
     if (password !== confirmPassword) return alert(isEn ? 'Passwords do not match.' : 'Le password non coincidono.');
     setLoading(true);
     const fullName = `${nome.trim()} ${cognome.trim()}`;
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email, password,
       options: {
         data: { full_name: fullName, first_name: nome.trim(), last_name: cognome.trim() },
         emailRedirectTo: window.location.origin,
       },
     });
+    if (error) { alert(t('error') + ': ' + error.message); setLoading(false); return; }
+
+    const userId = data?.user?.id;
+    if (userId) {
+      // Salva dati extra in impostazioni
+      const updates = { user_id: userId, nome_azienda: nomeAzienda || null, telefono: telefono || null };
+      await supabase.from('impostazioni').upsert(updates, { onConflict: 'user_id' });
+
+      // Upload logo se presente
+      if (logoFile) {
+        const ext = logoFile.name.split('.').pop();
+        const path = `${userId}/logo.${ext}`;
+        const { error: upErr } = await supabase.storage.from('azienda-assets').upload(path, logoFile, { upsert: true });
+        if (!upErr) {
+          const { data: urlData } = supabase.storage.from('azienda-assets').getPublicUrl(path);
+          await supabase.from('impostazioni').upsert({ user_id: userId, logo_url: urlData.publicUrl }, { onConflict: 'user_id' });
+        }
+      }
+    }
+
     setLoading(false);
-    if (error) alert(t('error') + ': ' + error.message);
-    else setSignupDone(true);
+    setSignupDone(true);
   };
 
   const handleResetPassword = async () => {
@@ -82,11 +119,19 @@ export default function Login({ supabase, logo }) {
     else setResetSent(true);
   };
 
+  const nextStep = () => setStep(s => s + 1);
+  const prevStep = () => setStep(s => s - 1);
+
+  const TOTAL_STEPS = 4;
+
+  const stepMascots = [mascotSaluto, mascot25, mascot28, mascot30];
+  const currentMascot = stepMascots[step - 1] || mascot23;
+
   // ── SPLASH ────────────────────────────────────────────────────────────────
   if (showSplash) {
     return (
       <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(135deg, #5D5C9E 0%, #4a4980 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
-        <style>{`@keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes popIn{from{transform:scale(0.8);opacity:0}to{transform:scale(1);opacity:1}}`}</style>
+        <style>{`@keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes popIn{from{transform:scale(0.8);opacity:0}to{transform:scale(1);opacity:1}}@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
         <img src={logo} alt="Kipri" style={{ height: '60px', width: 'auto', filter: 'brightness(0) invert(1)', animation: 'popIn 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.2s both' }} />
         <div style={{ ...font, color: 'rgba(255,255,255,0.5)', fontSize: '13px', fontWeight: '600', letterSpacing: '2px', textTransform: 'uppercase', animation: 'fadeIn 0.5s ease 0.6s both' }}>
           {isEn ? 'your business in your pocket' : 'il tuo business in tasca'}
@@ -142,98 +187,218 @@ export default function Login({ supabase, logo }) {
     );
   }
 
-  // ── SIGNUP ────────────────────────────────────────────────────────────────
+  // ── ONBOARDING MULTI-STEP ─────────────────────────────────────────────────
   if (showSignup) {
+    if (signupDone) {
+      return (
+        <div style={containerStyle}>
+          <style>{`@keyframes popIn{from{transform:scale(0.8);opacity:0}to{transform:scale(1);opacity:1}}@keyframes fadeUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
+          <div style={{ ...cardStyle, textAlign: 'center' }}>
+            <img src={mascot23} alt="" style={{ height: '140px', marginBottom: '8px', animation: 'popIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both' }} />
+            <div style={{ fontSize: '36px', marginBottom: '8px', animation: 'popIn 0.5s ease 0.3s both' }}>🎉</div>
+            <h3 style={{ ...font, fontWeight: '800', color: '#1E293B', fontSize: '24px', margin: '0 0 8px', animation: 'fadeUp 0.5s ease 0.4s both' }}>
+              {isEn ? `You're in, ${nome}!` : `Benvenuto in KIPRI, ${nome}!`}
+            </h3>
+            <p style={{ ...font, color: '#64748B', fontSize: '14px', lineHeight: 1.7, margin: '0 0 8px', animation: 'fadeUp 0.5s ease 0.5s both' }}>
+              {isEn
+                ? <span>We sent a confirmation email to <strong>{email}</strong>.<br />Click the link to activate your account.</span>
+                : <span>Abbiamo inviato una email di conferma a <strong>{email}</strong>.<br />Clicca sul link per attivare il tuo account.</span>}
+            </p>
+            <p style={{ ...font, color: '#94A3B8', fontSize: '12px', margin: '0 0 28px', animation: 'fadeUp 0.5s ease 0.6s both' }}>
+              {isEn ? '📧 Also check your spam folder.' : '📧 Controlla anche la cartella spam.'}
+            </p>
+            <button onClick={() => { setShowSignup(false); setSignupDone(false); setStep(1); }} style={{ ...loginBtnStyle, ...font }}>
+              {isEn ? 'Go to login' : 'Vai al login'} <LogIn size={20} style={{ marginLeft: '8px' }} />
+            </button>
+            <VersionBadge font={font} />
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div style={containerStyle}>
-        <div style={cardStyle}>
-          <img src={logo} alt="Kipri" style={{ height: '50px', marginBottom: '8px' }} />
+        <style>{`@keyframes slideIn{from{transform:translateX(30px);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes popIn{from{transform:scale(0.85);opacity:0}to{transform:scale(1);opacity:1}}`}</style>
+        <div style={{ ...cardStyle, paddingTop: '28px' }}>
 
-          {signupDone ? (
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎉</div>
-              <h3 style={{ ...font, fontWeight: '800', color: '#1E293B', fontSize: '22px', margin: '0 0 8px' }}>
-                {isEn ? `Welcome to KIPRI, ${nome}!` : `Benvenuto in KIPRI, ${nome}!`}
-              </h3>
-              <p style={{ ...font, color: '#64748B', fontSize: '14px', lineHeight: 1.7, margin: '0 0 8px' }}>
-                {isEn
-                  ? <span>We sent a confirmation email to <strong>{email}</strong>.<br />Click the link to activate your account.</span>
-                  : <span>Abbiamo inviato una email di conferma a <strong>{email}</strong>.<br />Clicca sul link per attivare l'account.</span>}
+          {/* Header: logo + back */}
+          <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <button onClick={() => step === 1 ? setShowSignup(false) : prevStep()} style={backBtnStyle(font)}>
+              <ArrowLeft size={16} /> {step === 1 ? (isEn ? 'Login' : 'Login') : (isEn ? 'Back' : 'Indietro')}
+            </button>
+            <img src={logo} alt="Kipri" style={{ height: '28px' }} />
+          </div>
+
+          {/* Progress bar */}
+          <div style={{ width: '100%', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+              {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+                <div key={i} style={{
+                  flex: 1, height: '4px', borderRadius: '4px', marginRight: i < TOTAL_STEPS - 1 ? '6px' : 0,
+                  background: i < step ? 'linear-gradient(90deg, #5D5C9E, #7C7BC4)' : '#E2E8F0',
+                  transition: 'background 0.4s ease'
+                }} />
+              ))}
+            </div>
+            <div style={{ ...font, fontSize: '11px', color: '#94A3B8', fontWeight: '600', textAlign: 'right' }}>
+              {isEn ? `Step ${step} of ${TOTAL_STEPS}` : `Passo ${step} di ${TOTAL_STEPS}`}
+            </div>
+          </div>
+
+          {/* Mascot */}
+          <img key={step} src={currentMascot} alt="" style={{ height: '100px', marginBottom: '12px', animation: 'popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both' }} />
+
+          {/* STEP 1 — Nome & Cognome */}
+          {step === 1 && (
+            <div style={{ width: '100%', animation: 'slideIn 0.3s ease both' }}>
+              <h2 style={{ ...font, fontWeight: '800', color: '#1E293B', fontSize: '22px', margin: '0 0 4px' }}>
+                {isEn ? '👋 Hi there!' : '👋 Ciao!'}
+              </h2>
+              <p style={{ ...font, color: '#94A3B8', fontSize: '13px', margin: '0 0 20px', lineHeight: 1.5 }}>
+                {isEn ? 'Let\'s start with your name.' : 'Iniziamo dal tuo nome.'}
               </p>
-              <p style={{ ...font, color: '#94A3B8', fontSize: '12px', margin: '0 0 24px' }}>
-                {isEn ? '📧 Also check your spam folder.' : '📧 Controlla anche la cartella spam.'}
-              </p>
-              <button onClick={() => { setShowSignup(false); setSignupDone(false); }} style={{ ...loginBtnStyle, ...font }}>
-                {isEn ? 'Go to login' : 'Vai al login'} <LogIn size={20} style={{ marginLeft: '8px' }} />
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                <div style={{ ...inputGroupStyle, flex: 1, marginBottom: 0, padding: '12px 14px' }}>
+                  <User size={16} color="#94A3B8" />
+                  <input type="text" placeholder={isEn ? 'First name' : 'Nome'} value={nome}
+                    onChange={e => setNome(e.target.value)} style={{ ...inputStyle, ...font, fontSize: '15px' }} autoFocus />
+                </div>
+                <div style={{ ...inputGroupStyle, flex: 1, marginBottom: 0, padding: '12px 14px' }}>
+                  <User size={16} color="#94A3B8" />
+                  <input type="text" placeholder={isEn ? 'Last name' : 'Cognome'} value={cognome}
+                    onChange={e => setCognome(e.target.value)} style={{ ...inputStyle, ...font, fontSize: '15px' }} />
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  if (!nome.trim()) return alert(isEn ? 'Please enter your first name.' : 'Inserisci il tuo nome.');
+                  if (!cognome.trim()) return alert(isEn ? 'Please enter your last name.' : 'Inserisci il tuo cognome.');
+                  nextStep();
+                }}
+                style={{ ...loginBtnStyle, ...font, marginTop: '8px' }}>
+                {isEn ? 'Continue' : 'Continua'} <ChevronRight size={20} style={{ marginLeft: '8px' }} />
               </button>
             </div>
-          ) : (
-            <>
-              <button onClick={() => setShowSignup(false)} style={backBtnStyle(font)}>
-                <ArrowLeft size={16} /> {isEn ? 'Back to login' : 'Torna al login'}
-              </button>
-              <h2 style={{ ...font, fontWeight: '800', color: '#1E293B', fontSize: '24px', margin: '4px 0 4px', alignSelf: 'flex-start' }}>
-                {isEn ? 'Create your account' : 'Crea il tuo account'}
+          )}
+
+          {/* STEP 2 — Email & Password */}
+          {step === 2 && (
+            <div style={{ width: '100%', animation: 'slideIn 0.3s ease both' }}>
+              <h2 style={{ ...font, fontWeight: '800', color: '#1E293B', fontSize: '22px', margin: '0 0 4px' }}>
+                {isEn ? '🔐 Your account' : '🔐 Il tuo account'}
               </h2>
-              <p style={{ ...font, color: '#94A3B8', fontSize: '13px', margin: '0 0 18px', alignSelf: 'flex-start', lineHeight: 1.5 }}>
+              <p style={{ ...font, color: '#94A3B8', fontSize: '13px', margin: '0 0 20px', lineHeight: 1.5 }}>
                 {isEn ? 'Free during the beta. No card required.' : 'Gratis durante la beta. Nessuna carta richiesta.'}
               </p>
-
-              <form onSubmit={handleSignup} style={{ width: '100%' }}>
-                {/* Nome + Cognome */}
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                  <div style={{ ...inputGroupStyle, flex: 1, marginBottom: 0, padding: '12px 14px' }}>
-                    <User size={16} color="#94A3B8" />
-                    <input type="text" placeholder={isEn ? 'First name' : 'Nome'} value={nome}
-                      onChange={e => setNome(e.target.value)} style={{ ...inputStyle, ...font, fontSize: '15px' }} required autoFocus />
-                  </div>
-                  <div style={{ ...inputGroupStyle, flex: 1, marginBottom: 0, padding: '12px 14px' }}>
-                    <User size={16} color="#94A3B8" />
-                    <input type="text" placeholder={isEn ? 'Last name' : 'Cognome'} value={cognome}
-                      onChange={e => setCognome(e.target.value)} style={{ ...inputStyle, ...font, fontSize: '15px' }} required />
-                  </div>
-                </div>
-
-                {/* Email */}
-                <div style={inputGroupStyle}>
-                  <Mail size={20} color="#94A3B8" />
-                  <input type="email" placeholder={isEn ? 'Your email' : 'La tua email'} value={email}
-                    onChange={e => setEmail(e.target.value)} style={{ ...inputStyle, ...font }} required />
-                </div>
-
-                {/* Password */}
-                <div style={inputGroupStyle}>
-                  <Lock size={20} color="#94A3B8" />
-                  <input type={showPwd ? 'text' : 'password'}
-                    placeholder={isEn ? 'Choose a password' : 'Scegli una password'} value={password}
-                    onChange={e => setPassword(e.target.value)} style={{ ...inputStyle, ...font }} required minLength={6} />
-                  <button type="button" onClick={() => setShowPwd(!showPwd)} style={eyeBtnStyle}>
-                    {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-
-                {/* Conferma password */}
-                <div style={inputGroupStyle}>
-                  <Lock size={20} color="#94A3B8" />
-                  <input type={showConfirmPwd ? 'text' : 'password'}
-                    placeholder={isEn ? 'Confirm password' : 'Conferma password'} value={confirmPassword}
-                    onChange={e => setConfirmPassword(e.target.value)} style={{ ...inputStyle, ...font }} required minLength={6} />
-                  <button type="button" onClick={() => setShowConfirmPwd(!showConfirmPwd)} style={eyeBtnStyle}>
-                    {showConfirmPwd ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-
-                <p style={{ ...font, fontSize: '12px', color: '#94A3B8', margin: '-4px 0 16px', lineHeight: 1.5 }}>
-                  {isEn ? 'Min. 6 characters. Your data is safe with us.' : 'Min. 6 caratteri. I tuoi dati sono al sicuro.'}
-                </p>
-
-                <button type="submit" disabled={loading} style={{ ...loginBtnStyle, ...font }}>
-                  {loading ? (isEn ? 'Creating...' : 'Creazione...') : (isEn ? 'Create free account' : 'Crea account gratuito')}
-                  {!loading && <UserPlus size={20} style={{ marginLeft: '10px' }} />}
+              <div style={inputGroupStyle}>
+                <Mail size={20} color="#94A3B8" />
+                <input type="email" placeholder={isEn ? 'Your email' : 'La tua email'} value={email}
+                  onChange={e => setEmail(e.target.value)} style={{ ...inputStyle, ...font }} autoFocus />
+              </div>
+              <div style={inputGroupStyle}>
+                <Lock size={20} color="#94A3B8" />
+                <input type={showPwd ? 'text' : 'password'}
+                  placeholder={isEn ? 'Choose a password' : 'Scegli una password'} value={password}
+                  onChange={e => setPassword(e.target.value)} style={{ ...inputStyle, ...font }} minLength={6} />
+                <button type="button" onClick={() => setShowPwd(!showPwd)} style={eyeBtnStyle}>
+                  {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
-              </form>
-            </>
+              </div>
+              <div style={inputGroupStyle}>
+                <Lock size={20} color="#94A3B8" />
+                <input type={showConfirmPwd ? 'text' : 'password'}
+                  placeholder={isEn ? 'Confirm password' : 'Conferma password'} value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)} style={{ ...inputStyle, ...font }} minLength={6} />
+                <button type="button" onClick={() => setShowConfirmPwd(!showConfirmPwd)} style={eyeBtnStyle}>
+                  {showConfirmPwd ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              <p style={{ ...font, fontSize: '11px', color: '#94A3B8', margin: '-4px 0 16px', lineHeight: 1.5 }}>
+                {isEn ? 'Min. 6 characters. Your data is safe with us. 🔒' : 'Min. 6 caratteri. I tuoi dati sono al sicuro. 🔒'}
+              </p>
+              <button
+                onClick={() => {
+                  if (!email) return alert(isEn ? 'Please enter your email.' : 'Inserisci la tua email.');
+                  if (password.length < 6) return alert(isEn ? 'Password must be at least 6 characters.' : 'La password deve essere di almeno 6 caratteri.');
+                  if (password !== confirmPassword) return alert(isEn ? 'Passwords do not match.' : 'Le password non coincidono.');
+                  nextStep();
+                }}
+                style={{ ...loginBtnStyle, ...font }}>
+                {isEn ? 'Continue' : 'Continua'} <ChevronRight size={20} style={{ marginLeft: '8px' }} />
+              </button>
+            </div>
           )}
+
+          {/* STEP 3 — Logo (skippabile) */}
+          {step === 3 && (
+            <div style={{ width: '100%', animation: 'slideIn 0.3s ease both' }}>
+              <h2 style={{ ...font, fontWeight: '800', color: '#1E293B', fontSize: '22px', margin: '0 0 4px' }}>
+                {isEn ? '🖼️ Your logo' : '🖼️ Il tuo logo'}
+              </h2>
+              <p style={{ ...font, color: '#94A3B8', fontSize: '13px', margin: '0 0 20px', lineHeight: 1.5 }}>
+                {isEn ? 'Upload your business logo. You can do this later too.' : 'Carica il logo della tua attività. Puoi farlo anche dopo.'}
+              </p>
+
+              <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoChange} style={{ display: 'none' }} />
+
+              <div
+                onClick={() => logoInputRef.current.click()}
+                style={{
+                  width: '100%', height: '120px', borderRadius: '20px',
+                  border: logoPreview ? '2px solid #5D5C9E' : '2px dashed #CBD5E1',
+                  background: logoPreview ? '#F8F9FF' : '#FAFAFA',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', marginBottom: '16px', gap: '8px', overflow: 'hidden', boxSizing: 'border-box'
+                }}>
+                {logoPreview
+                  ? <img src={logoPreview} alt="Logo" style={{ maxHeight: '100px', maxWidth: '100%', objectFit: 'contain' }} />
+                  : <>
+                    <Image size={28} color="#CBD5E1" />
+                    <span style={{ ...font, fontSize: '13px', color: '#94A3B8', fontWeight: '600' }}>
+                      {isEn ? 'Tap to upload' : 'Tocca per caricare'}
+                    </span>
+                  </>
+                }
+              </div>
+
+              <button onClick={nextStep} style={{ ...loginBtnStyle, ...font }}>
+                {logoPreview ? (isEn ? 'Continue' : 'Continua') : (isEn ? 'Continue' : 'Continua')}
+                <ChevronRight size={20} style={{ marginLeft: '8px' }} />
+              </button>
+              <button onClick={nextStep} style={{ ...skipBtnStyle, ...font }}>
+                <SkipForward size={14} /> {isEn ? 'Skip for now' : 'Salta per ora'}
+              </button>
+            </div>
+          )}
+
+          {/* STEP 4 — Info azienda (skippabile) */}
+          {step === 4 && (
+            <div style={{ width: '100%', animation: 'slideIn 0.3s ease both' }}>
+              <h2 style={{ ...font, fontWeight: '800', color: '#1E293B', fontSize: '22px', margin: '0 0 4px' }}>
+                {isEn ? '🏢 Your business' : '🏢 La tua attività'}
+              </h2>
+              <p style={{ ...font, color: '#94A3B8', fontSize: '13px', margin: '0 0 20px', lineHeight: 1.5 }}>
+                {isEn ? 'A few details to personalise your experience.' : 'Qualche info per personalizzare la tua esperienza.'}
+              </p>
+              <div style={inputGroupStyle}>
+                <Building2 size={20} color="#94A3B8" />
+                <input type="text" placeholder={isEn ? 'Business name' : 'Nome attività'} value={nomeAzienda}
+                  onChange={e => setNomeAzienda(e.target.value)} style={{ ...inputStyle, ...font }} autoFocus />
+              </div>
+              <div style={inputGroupStyle}>
+                <Phone size={20} color="#94A3B8" />
+                <input type="tel" placeholder={isEn ? 'Phone number' : 'Numero di telefono'} value={telefono}
+                  onChange={e => setTelefono(e.target.value)} style={{ ...inputStyle, ...font }} />
+              </div>
+              <button onClick={handleSignup} disabled={loading} style={{ ...loginBtnStyle, ...font }}>
+                {loading ? (isEn ? 'Creating account...' : 'Creazione account...') : (isEn ? 'Create my account 🚀' : 'Crea il mio account 🚀')}
+              </button>
+              <button onClick={handleSignup} disabled={loading} style={{ ...skipBtnStyle, ...font }}>
+                <SkipForward size={14} /> {isEn ? 'Skip and finish' : 'Salta e termina'}
+              </button>
+            </div>
+          )}
+
           <VersionBadge font={font} />
         </div>
       </div>
@@ -300,7 +465,7 @@ export default function Login({ supabase, logo }) {
           <p style={{ ...font, fontSize: '14px', color: '#64748B', margin: '0 0 10px', fontWeight: '600' }}>
             {isEn ? "Don't have an account yet?" : 'Non hai ancora un account?'}
           </p>
-          <button onClick={() => setShowSignup(true)}
+          <button onClick={() => { setShowSignup(true); setStep(1); }}
             style={{ ...font, width: '100%', padding: '13px', borderRadius: '14px', background: 'transparent', border: '2px solid #5D5C9E', color: '#5D5C9E', fontSize: '16px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
             <UserPlus size={18} />
             {isEn ? 'Start free — no card needed' : 'Inizia gratis — è gratuito'}
@@ -324,12 +489,18 @@ function VersionBadge({ font }) {
 const backBtnStyle = (font) => ({
   alignSelf: 'flex-start', background: 'none', border: 'none', color: '#94A3B8',
   cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
-  ...font, fontSize: '14px', marginBottom: '16px', padding: 0,
+  ...font, fontSize: '14px', padding: 0, margin: 0,
 });
 
 const eyeBtnStyle = {
   background: 'none', border: 'none', cursor: 'pointer', padding: 0,
   display: 'flex', alignItems: 'center', color: '#94A3B8', flexShrink: 0,
+};
+
+const skipBtnStyle = {
+  marginTop: '10px', background: 'none', border: 'none', color: '#94A3B8',
+  fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center',
+  justifyContent: 'center', gap: '6px', fontWeight: '600', width: '100%', padding: '8px',
 };
 
 const containerStyle = { display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#F0F2F5', padding: '20px' };
