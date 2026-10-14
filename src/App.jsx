@@ -14,13 +14,13 @@ import { Home, LogOut, Settings } from 'lucide-react';
 import { useLang } from './LanguageContext';
 import './app.css';
 import logo from './assets/logo.png';
-import mascot from './assets/mascot.svg';
 import ModaleCliente from './components/ModaleCliente';
 import ModaleAppuntamento from './components/ModaleAppuntamento';
 import ProGate from './components/ProGate';
 import Statistiche from './components/Statistiche';
 import PagamentiQR from './components/PagamentiQR';
 import Promuoviti from './components/Promuoviti';
+import SeasonalMascot, { SeasonBadge } from './components/SeasonalMascot';
 
 export default function App() {
   const { lang, switchLang, t } = useLang();
@@ -193,10 +193,7 @@ export default function App() {
             onClick={() => setVista('IMPOSTAZIONI')}
             title="Apri Impostazioni"
           >
-            <img src={mascot} alt=""
-              style={{ position: 'absolute', bottom: '8px', right: '12px', height: '86px', width: 'auto', zIndex: 2, filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.2))' }}
-              onError={e => { e.target.style.display = 'none'; }}
-            />
+            <SeasonalMascot />
             <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '120px', height: '120px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)', zIndex: 0 }} />
             <div style={{ position: 'absolute', bottom: '-20px', left: '-20px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(112,193,142,0.15)', zIndex: 0 }} />
 
@@ -226,6 +223,7 @@ export default function App() {
               <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', marginTop: '4px', fontWeight: '500' }}>
                 {new Date().toLocaleDateString(lang === 'en' ? 'en-GB' : 'it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
               </div>
+              <SeasonBadge lang={lang} />
             </div>
           </div>
         )}
