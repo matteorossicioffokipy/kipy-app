@@ -36,6 +36,8 @@ export const translations = {
     dashboard_pagamentiQR_sub: 'Incassa live',
     dashboard_statistiche_sub: 'Analisi e grafici',
     dashboard_impostazioni_sub: 'Profilo e preferenze',
+        dashboard_promuoviti: 'Promuoviti',
+    dashboard_promuoviti_sub: 'Invia promozioni',
 
     // RUBRICA
     rubrica_title: 'Rubrica',
@@ -215,6 +217,8 @@ export const translations = {
     dashboard_pagamentiQR_sub: 'Collect live',
     dashboard_statistiche_sub: 'Analytics & charts',
     dashboard_impostazioni_sub: 'Profile & preferences',
+        dashboard_promuoviti: 'Promote Yourself',
+    dashboard_promuoviti_sub: 'Send promotions',
 
     // RUBRICA
     rubrica_title: 'Contacts',

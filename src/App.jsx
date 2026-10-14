@@ -20,6 +20,7 @@ import ModaleAppuntamento from './components/ModaleAppuntamento';
 import ProGate from './components/ProGate';
 import Statistiche from './components/Statistiche';
 import PagamentiQR from './components/PagamentiQR';
+import Promuoviti from './components/Promuoviti';
 
 export default function App() {
   const { lang, switchLang, t } = useLang();
@@ -282,6 +283,10 @@ export default function App() {
           isPro
             ? <PagamentiQR config={config} supabase={supabase} user={user} />
             : <ProGate onUpgrade={handleUpgradePro} loading={loadingPro} />
+        )}
+
+        {vista === 'PROMUOVITI' && (
+          <Promuoviti supabase={supabase} user={user} clienti={clienti} config={config} />
         )}
 
         {vista === 'STATISTICHE' && (

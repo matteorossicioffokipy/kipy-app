@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Calendar, CheckSquare, Settings, QrCode, FileText, TrendingUp, BarChart2, Banknote, Clock } from 'lucide-react';
+import { Users, Calendar, CheckSquare, Settings, QrCode, FileText, TrendingUp, BarChart2, Banknote, Clock, Megaphone } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 import { formatOra } from '../utils/timeFormat';
 
@@ -143,7 +143,13 @@ export default function Dashboard({ setView, config, appuntamenti, supabase, use
           <span style={labelStyle}>{t('dashboard_statistiche')}</span>
           <span style={subLabelStyle}>{t('dashboard_statistiche_sub')}</span>
         </div>
-
+        <div onClick={() => setView('PROMUOVITI')} style={{ ...cardStyle, gridColumn: 'span 2', background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)' }}>
+          <div style={{ ...iconWrapStyle, background: 'rgba(249,115,22,0.12)' }}>
+            <Megaphone color="#F97316" size={28} />
+          </div>
+          <span style={labelStyle}>{t('dashboard_promuoviti')}</span>
+          <span style={subLabelStyle}>{t('dashboard_promuoviti_sub')}</span>
+        </div>
         <div onClick={() => setView('IMPOSTAZIONI')} style={{ ...cardStyle, gridColumn: 'span 2' }}>
           <div style={{ ...iconWrapStyle, background: '#F8FAFC' }}>
             <Settings color="#64748B" size={28} />
