@@ -115,8 +115,7 @@ export default function Fatture({ supabase, user, clienti, config, appuntamenti 
       <AliquotaIVA>${ivaPerc.toFixed(2)}</AliquotaIVA>
       ${natura}
     </DettaglioLinee>`;
-    }).join('
-');
+    }).join('\n');
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <p:FatturaElettronica versione="FPR12" xmlns:p="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2">
