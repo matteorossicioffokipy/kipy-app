@@ -161,7 +161,7 @@ export default function App() {
 
   if (showSplash) return (
     <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(135deg, #5D5C9E 0%, #4a4980 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px', fontFamily: "'Baloo 2', sans-serif" }}>
-      <img src={logo} alt="Kipri" style={{ width: '110px', height: 'auto', filter: 'drop-shadow(0 4px 24px rgba(0,0,0,0.18))', animation: 'fadeUp 0.5s ease both' }} />
+      <img src={logo} alt="Kipri" style={{ width: '80px', height: 'auto', filter: 'drop-shadow(0 4px 24px rgba(0,0,0,0.18))', animation: 'fadeUp 0.5s ease both' }} />
       <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '16px', fontWeight: '600', margin: 0, letterSpacing: '0.5px', animation: 'fadeUp 0.5s ease 0.2s both' }}>il tuo business in tasca</p>
     </div>
   );
