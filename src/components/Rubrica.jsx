@@ -1,10 +1,10 @@
 import React from 'react';
-import { Plus, Phone, Mail, Pencil, MessageCircle, UserPlus, Trash2, BookUser } from 'lucide-react';
+import { Plus, Phone, Mail, Pencil, MessageCircle, UserPlus, Trash2, BookUser, Star } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 
 export default function Rubrica({
   clienti, setMostraModuloApp, setFormApp, setClienteInModifica,
-  setFormCliente, setMostraModuloCliente, onEliminaCliente
+  setFormCliente, setMostraModuloCliente, onEliminaCliente, onToggleVip
 }) {
   const { t } = useLang();
 
@@ -73,9 +73,29 @@ export default function Rubrica({
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {clienti.map((cliente) => (
-            <div key={cliente.id} style={cardStyle}>
+            <div key={cliente.id} style={{ ...cardStyle, borderColor: cliente.vip ? '#FDE68A' : '#F1F5F9' }}>
 
-              <h4 style={nomeStyle}>{cliente.nome}</h4>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h4 style={nomeStyle}>{cliente.nome}</h4>
+                {/* Stellina VIP */}
+                <button
+                  onClick={() => onToggleVip?.(cliente.id, !cliente.vip)}
+                  title={cliente.vip ? 'Rimuovi VIP' : 'Segna come VIP'}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    padding: '4px', borderRadius: '8px', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'transform 0.15s',
+                  }}
+                >
+                  <Star
+                    size={20}
+                    color={cliente.vip ? '#F59E0B' : '#E2E8F0'}
+                    fill={cliente.vip ? '#F59E0B' : 'none'}
+                    style={{ transition: 'all 0.2s' }}
+                  />
+                </button>
+              </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -148,7 +168,7 @@ export default function Rubrica({
 
 const headerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' };
 const cardStyle = { background: 'white', padding: '15px', borderRadius: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', border: '1px solid #F1F5F9', width: '100%', boxSizing: 'border-box' };
-const nomeStyle = { margin: 0, fontWeight: '700', color: '#1E293B', fontSize: '16px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
+const nomeStyle = { margin: 0, fontWeight: '700', color: '#1E293B', fontSize: '16px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 };
 const addBtnStyle = { background: '#5D5C9E', color: 'white', border: 'none', width: '40px', height: '40px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 };
 const iconCircleStyle = (bg, color) => ({ background: bg, color: color, width: '32px', height: '32px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', flexShrink: 0 });
 const actionBtnStyle = (bg, color = 'white') => ({ background: bg, color: color, border: 'none', width: '32px', height: '32px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 });

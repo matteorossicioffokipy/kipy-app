@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Megaphone, Send, Mail, MessageCircle, Users, Moon, Star,
-  Image, Check, ChevronRight, Rocket, Info
+  Image, Check, ChevronRight, Info, UserCheck, ChevronDown, X
 } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 
@@ -56,10 +56,14 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
   const [templateId, setTemplateId] = useState('viola');
   const [fotoUrl, setFotoUrl] = useState(null);
   const [destinatari, setDestinatari] = useState('tutti');
+  const [clientiSelezionati, setClientiSelezionati] = useState([]); // per "personale"
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [canali, setCanali] = useState({ whatsapp: true, email: false });
   const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
   const [promozioni, setPromozioni] = useState([]);
   const [loadingPromo, setLoadingPromo] = useState(true);
+  const dropdownRef = useRef(null);
 
   const tpl = TEMPLATES.find(tp => tp.id === templateId);
 
@@ -75,10 +79,21 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
       .catch(() => setLoadingPromo(false));
   }, [user]);
 
-  // Aggiorna testo default quando cambia lingua
   useEffect(() => {
     setTesto(isEn ? DEFAULT_TESTO_EN : DEFAULT_TESTO_IT);
   }, [lang]);
+
+  // Chiudi dropdown cliccando fuori
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [dropdownOpen]);
 
   const handleFoto = (e) => {
     const file = e.target.files?.[0];
@@ -88,18 +103,20 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
     reader.readAsDataURL(file);
   };
 
+  const nVip = clienti?.filter(c => c.vip)?.length || 0;
+  const nInattivi = clienti?.filter(c => !c.ultimo_appuntamento ||
+    new Date(c.ultimo_appuntamento) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))?.length || 0;
+
   const clientiFiltrati = (() => {
     if (!clienti?.length) return [];
     if (destinatari === 'tutti') return clienti;
     if (destinatari === 'vip') return clienti.filter(c => c.vip);
+    if (destinatari === 'personale') return clienti.filter(c => clientiSelezionati.includes(c.id));
     return clienti.filter(c => !c.ultimo_appuntamento ||
       new Date(c.ultimo_appuntamento) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
   })();
 
   const nDest = clientiFiltrati.length;
-  const nVip = clienti?.filter(c => c.vip)?.length || 0;
-  const nInattivi = clienti?.filter(c => !c.ultimo_appuntamento ||
-    new Date(c.ultimo_appuntamento) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))?.length || 0;
 
   const testoAnteprima = testo
     .replace(/\{nome\}/g, isEn ? 'Emma' : 'Giulia')
@@ -108,29 +125,30 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
   const canProceed = () => {
     if (step === 1) return titolo.trim().length > 0 && testo.trim().length > 0;
     if (step === 2) return true;
-    if (step === 3) return canali.whatsapp || canali.email;
+    if (step === 3) {
+      if (!(canali.whatsapp || canali.email)) return false;
+      if (destinatari === 'personale' && clientiSelezionati.length === 0) return false;
+      return true;
+    }
     return false;
   };
 
-  const handleInvia = async () => {
+  const toggleClienteSelezionato = (id) => {
+    setClientiSelezionati(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleInvia = () => {
+    if (loading) return;
     setLoading(true);
-    try {
-      await supabase.from('promozioni').insert([{
-        user_id: user.id,
-        titolo,
-        testo,
-        template_id: templateId,
-        destinatari,
-        n_destinatari: nDest,
-        canali: JSON.stringify(canali),
-        created_at: new Date().toISOString(),
-      }]);
-    } catch (_) {}
 
     const clientiConCanale = clientiFiltrati.filter(c =>
       (canali.whatsapp && c.tel) || (canali.email && c.email)
     );
 
+    // ── Apri WhatsApp/Email PRIMA dell'await Supabase ──
+    // (i browser bloccano window.open fuori dal click event diretto)
     if (canali.whatsapp) {
       const primo = clientiConCanale.find(c => c.tel);
       if (primo) {
@@ -152,65 +170,91 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
       }
     }
 
-    setLoading(false);
-    const { data } = await supabase.from('promozioni').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10);
-    setPromozioni(data || []);
-    setStep(1);
-    setTitolo('');
-    setTesto(isEn ? DEFAULT_TESTO_EN : DEFAULT_TESTO_IT);
-    setTemplateId('viola');
-    setFotoUrl(null);
-    setDestinatari('tutti');
-    setCanali({ whatsapp: true, email: false });
+    // ── Salva su Supabase in background ──
+    supabase.from('promozioni').insert([{
+      user_id: user.id,
+      titolo,
+      testo,
+      template_id: templateId,
+      destinatari,
+      n_destinatari: nDest,
+      canali: JSON.stringify(canali),
+      created_at: new Date().toISOString(),
+    }]).then(() => {
+      return supabase.from('promozioni').select('*').eq('user_id', user.id)
+        .order('created_at', { ascending: false }).limit(10);
+    }).then(({ data }) => {
+      setPromozioni(data || []);
+    }).catch(() => {}).finally(() => {
+      setLoading(false);
+      setSent(true);
+      setTimeout(() => {
+        setSent(false);
+        setStep(1);
+        setTitolo('');
+        setTesto(isEn ? DEFAULT_TESTO_EN : DEFAULT_TESTO_IT);
+        setTemplateId('viola');
+        setFotoUrl(null);
+        setDestinatari('tutti');
+        setClientiSelezionati([]);
+        setCanali({ whatsapp: true, email: false });
+      }, 1800);
+    });
   };
 
   const L = {
-    title:       isEn ? 'Promote Yourself'                          : 'Promuoviti',
-    sub:         isEn ? 'Create a promotion and send it to clients.' : 'Crea una promozione e inviala ai tuoi clienti.',
-    step1:       isEn ? 'Write your promotion'                      : 'Scrivi la tua promozione',
-    step1sub:    isEn ? 'The client\'s name will be added automatically where you see {nome}.' : 'Il nome del cliente verrà inserito automaticamente dove vedi {nome}.',
-    step2:       isEn ? 'Choose a template'                         : 'Scegli un template',
-    step2sub:    isEn ? 'Optional: add a photo.'                    : 'Opzionale: aggiungi una foto.',
-    step3:       isEn ? 'Recipients & channel'                      : 'Destinatari e canale',
-    step3sub:    isEn ? 'Who receives it and how.'                  : 'Chi lo riceve e come.',
-    lblTitolo:   isEn ? 'Promotion title'                           : 'Titolo promozione',
-    lblTesto:    isEn ? 'Message'                                   : 'Messaggio',
-    pTitle:      isEn ? 'E.g. Christmas offer — 30% off'           : 'Es. Offerta Natale — 30% di sconto',
-    varHint:     isEn ? 'ℹ️  {nome} = client name · {attività} = your business name' : 'ℹ️  {nome} = nome del cliente · {attività} = nome della tua attività',
-    addPhoto:    isEn ? 'Add a photo (optional)'                    : 'Aggiungi una foto (opzionale)',
-    photoAdded:  isEn ? 'Photo added ✓'                            : 'Foto aggiunta ✓',
-    preview:     isEn ? 'Preview'                                   : 'Anteprima',
-    tuttiLbl:    isEn ? 'All clients'                               : 'Tutti i clienti',
-    tuttiSub:    isEn ? 'Send to your entire contact list'          : 'Invia a tutta la rubrica',
-    inativiLbl:  isEn ? 'Inactive clients'                         : 'Clienti inattivi',
-    inativiSub:  isEn ? 'No appointment in 30+ days'               : 'Nessun appuntamento da 30+ giorni',
-    vipLbl:      'VIP',
-    vipSub:      isEn ? 'Marked as VIP'                            : 'Contrassegnati come VIP',
-    sendVia:     isEn ? 'Send via'                                  : 'Invia tramite',
-    waSub:       isEn ? 'Opens pre-filled message'                  : 'Apre il messaggio pre-compilato',
-    emailSub:    isEn ? 'Opens your email client'                   : 'Apre il client email',
-    infoWa:      isEn ? 'WhatsApp opens a pre-filled window for each client. You confirm sending with one tap.' : 'WhatsApp apre una finestra per ogni cliente con il messaggio pre-compilato. Confermi l\'invio con un tap.',
-    send:        isEn ? 'Send promotion'                            : 'Invia promozione',
-    sending:     isEn ? 'Sending...'                                : 'Invio...',
-    next:        isEn ? 'Next'                                      : 'Avanti',
-    back:        isEn ? 'Back'                                      : 'Indietro',
-    history:     isEn ? 'SENT PROMOTIONS'                          : 'PROMOZIONI INVIATE',
-    noHistory:   isEn ? 'No promotions sent yet.'                  : 'Nessuna promozione inviata ancora.',
-    dest:        isEn ? 'clients'                                   : 'clienti',
-    chars:       isEn ? 'characters'                                : 'caratteri',
-    stepLabels:  isEn ? ['Text', 'Template', 'Send']               : ['Testo', 'Template', 'Invia'],
-    sent:        isEn ? 'Sent'                                      : 'Inviata',
-    noDest:      isEn ? 'No clients with contact details found.'   : 'Nessun cliente con dati di contatto trovato.',
+    title:        isEn ? 'Promote Yourself'                          : 'Promuoviti',
+    sub:          isEn ? 'Create a promotion and send it to clients.' : 'Crea una promozione e inviala ai tuoi clienti.',
+    step1:        isEn ? 'Write your promotion'                      : 'Scrivi la tua promozione',
+    step1sub:     isEn ? 'The client\'s name will be added automatically where you see {nome}.' : 'Il nome del cliente verrà inserito automaticamente dove vedi {nome}.',
+    step2:        isEn ? 'Choose a template'                         : 'Scegli un template',
+    step2sub:     isEn ? 'Optional: add a photo.'                    : 'Opzionale: aggiungi una foto.',
+    step3:        isEn ? 'Recipients & channel'                      : 'Destinatari e canale',
+    step3sub:     isEn ? 'Who receives it and how.'                  : 'Chi lo riceve e come.',
+    lblTitolo:    isEn ? 'Promotion title'                           : 'Titolo promozione',
+    lblTesto:     isEn ? 'Message'                                   : 'Messaggio',
+    pTitle:       isEn ? 'E.g. Christmas offer — 30% off'           : 'Es. Offerta Natale — 30% di sconto',
+    varHint:      isEn ? 'ℹ️  {nome} = client name · {attività} = your business name' : 'ℹ️  {nome} = nome del cliente · {attività} = nome della tua attività',
+    addPhoto:     isEn ? 'Add a photo (optional)'                    : 'Aggiungi una foto (opzionale)',
+    photoAdded:   isEn ? 'Photo added ✓'                            : 'Foto aggiunta ✓',
+    preview:      isEn ? 'Preview'                                   : 'Anteprima',
+    tuttiLbl:     isEn ? 'All clients'                               : 'Tutti i clienti',
+    tuttiSub:     isEn ? 'Send to your entire contact list'          : 'Invia a tutta la rubrica',
+    inativiLbl:   isEn ? 'Inactive clients'                         : 'Clienti inattivi',
+    inativiSub:   isEn ? 'No appointment in 30+ days'               : 'Nessun appuntamento da 30+ giorni',
+    vipLbl:       'VIP',
+    vipSub:       isEn ? 'Marked as VIP'                            : 'Contrassegnati come VIP',
+    personaleLbl: isEn ? 'Specific clients'                          : 'Clienti specifici',
+    personaleSub: isEn ? 'Choose one or more clients'               : 'Scegli uno o più clienti',
+    selectPlh:    isEn ? 'Select clients…'                           : 'Seleziona clienti…',
+    sendVia:      isEn ? 'Send via'                                  : 'Invia tramite',
+    waSub:        isEn ? 'Opens pre-filled message'                  : 'Apre il messaggio pre-compilato',
+    emailSub:     isEn ? 'Opens your email client'                   : 'Apre il client email',
+    infoWa:       isEn ? 'WhatsApp opens a pre-filled window for the first client. You confirm sending with one tap.' : 'WhatsApp apre una finestra con il messaggio pre-compilato per il primo cliente. Confermi con un tap.',
+    send:         isEn ? 'Send promotion'                            : 'Invia promozione',
+    sending:      isEn ? 'Sending...'                                : 'Invio...',
+    sentOk:       isEn ? '✅ Sent!'                                  : '✅ Inviata!',
+    next:         isEn ? 'Next'                                      : 'Avanti',
+    back:         isEn ? 'Back'                                      : 'Indietro',
+    history:      isEn ? 'SENT PROMOTIONS'                           : 'PROMOZIONI INVIATE',
+    noHistory:    isEn ? 'No promotions sent yet.'                   : 'Nessuna promozione inviata ancora.',
+    dest:         isEn ? 'clients'                                   : 'clienti',
+    chars:        isEn ? 'characters'                                : 'caratteri',
+    stepLabels:   isEn ? ['Text', 'Template', 'Send']                : ['Testo', 'Template', 'Invia'],
+    sent:         isEn ? 'Sent'                                      : 'Inviata',
+    noDest:       isEn ? 'No clients with contact details found.'    : 'Nessun cliente con dati di contatto trovato.',
+    noVip:        isEn ? 'No VIP clients yet. Mark clients as VIP from the contacts list.' : 'Nessun cliente VIP. Contrassegna i clienti come VIP dalla rubrica.',
   };
 
   const segmenti = [
-    { id: 'tutti',    label: L.tuttiLbl,   sub: L.tuttiSub,   icon: <Users size={20} color={destinatari === 'tutti' ? 'white' : '#5D5C9E'} />,  n: clienti?.length || 0 },
-    { id: 'inattivi', label: L.inativiLbl, sub: L.inativiSub, icon: <Moon  size={20} color={destinatari === 'inattivi' ? 'white' : '#94A3B8'} />, n: nInattivi },
-    { id: 'vip',      label: L.vipLbl,     sub: L.vipSub,     icon: <Star  size={20} color={destinatari === 'vip' ? 'white' : '#F59E0B'} />,      n: nVip },
+    { id: 'tutti',     label: L.tuttiLbl,     sub: L.tuttiSub,     icon: <Users      size={20} color={destinatari === 'tutti'     ? 'white' : '#5D5C9E'} />, n: clienti?.length || 0 },
+    { id: 'inattivi',  label: L.inativiLbl,   sub: L.inativiSub,   icon: <Moon       size={20} color={destinatari === 'inattivi'  ? 'white' : '#94A3B8'} />, n: nInattivi },
+    { id: 'vip',       label: L.vipLbl,       sub: L.vipSub,       icon: <Star       size={20} color={destinatari === 'vip'       ? 'white' : '#F59E0B'} />, n: nVip },
+    { id: 'personale', label: L.personaleLbl, sub: L.personaleSub, icon: <UserCheck  size={20} color={destinatari === 'personale' ? 'white' : '#6366F1'} />, n: clientiSelezionati.length },
   ];
 
   const canaliBtns = [
-    { id: 'whatsapp', label: 'WhatsApp', sub: L.waSub,   icon: <MessageCircle size={26} color={canali.whatsapp ? '#25D366' : '#94A3B8'} />, activeColor: '#25D366', activeBg: '#F0FDF4' },
+    { id: 'whatsapp', label: 'WhatsApp', sub: L.waSub,    icon: <MessageCircle size={26} color={canali.whatsapp ? '#25D366' : '#94A3B8'} />, activeColor: '#25D366', activeBg: '#F0FDF4' },
     { id: 'email',    label: 'Email',    sub: L.emailSub, icon: <Mail          size={26} color={canali.email    ? '#5D5C9E' : '#94A3B8'} />, activeColor: '#5D5C9E', activeBg: '#EEEEF8' },
   ];
 
@@ -297,7 +341,6 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
               </div>
             </div>
 
-            {/* Anteprima */}
             {testo.length > 0 && (
               <div style={{ background: '#F8FAFC', borderRadius: '14px', padding: '14px', border: '1px solid #F1F5F9' }}>
                 <div style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>{L.preview}</div>
@@ -359,7 +402,6 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
               </div>
             </div>
 
-            {/* Upload foto */}
             <label style={uploadStyle}>
               <input type="file" accept="image/*" onChange={handleFoto} style={{ display: 'none' }} />
               <Image size={18} color={fotoUrl ? '#22C55E' : '#94A3B8'} />
@@ -383,35 +425,110 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
               {segmenti.map(seg => {
                 const active = destinatari === seg.id;
                 return (
-                  <div
-                    key={seg.id}
-                    onClick={() => setDestinatari(seg.id)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '12px',
-                      padding: '12px 14px', borderRadius: '14px',
-                      border: `1.5px solid ${active ? '#5D5C9E' : '#F1F5F9'}`,
-                      background: active ? '#EEEEF8' : 'white',
-                      cursor: 'pointer', transition: 'all 0.15s',
-                    }}
-                  >
-                    <div style={{
-                      width: '36px', height: '36px', borderRadius: '10px',
-                      background: active ? '#5D5C9E' : '#F8FAFC',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      flexShrink: 0, transition: 'all 0.15s',
-                    }}>
-                      {seg.icon}
+                  <div key={seg.id}>
+                    <div
+                      onClick={() => { setDestinatari(seg.id); if (seg.id !== 'personale') setDropdownOpen(false); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '12px',
+                        padding: '12px 14px', borderRadius: active && seg.id === 'personale' && dropdownOpen ? '14px 14px 0 0' : '14px',
+                        border: `1.5px solid ${active ? (seg.id === 'personale' ? '#6366F1' : '#5D5C9E') : '#F1F5F9'}`,
+                        background: active ? (seg.id === 'personale' ? '#EEEEFD' : '#EEEEF8') : 'white',
+                        cursor: 'pointer', transition: 'all 0.15s',
+                      }}
+                    >
+                      <div style={{
+                        width: '36px', height: '36px', borderRadius: '10px',
+                        background: active ? (seg.id === 'personale' ? '#6366F1' : '#5D5C9E') : '#F8FAFC',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0, transition: 'all 0.15s',
+                      }}>
+                        {seg.icon}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '14px', fontWeight: '700', color: '#1E293B' }}>{seg.label}</div>
+                        <div style={{ fontSize: '11px', color: '#94A3B8' }}>{seg.sub}</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                        <div style={{ fontSize: '13px', fontWeight: '800', color: seg.id === 'personale' ? '#6366F1' : '#5D5C9E', background: seg.id === 'personale' ? '#EEEEFD' : '#EEEEF8', padding: '3px 10px', borderRadius: '20px' }}>
+                          {seg.n} {L.dest}
+                        </div>
+                        {seg.id === 'personale' && (
+                          <ChevronDown size={16} color="#94A3B8" style={{ transform: active && dropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
+                            onClick={(e) => { e.stopPropagation(); if (active) setDropdownOpen(d => !d); }}
+                          />
+                        )}
+                      </div>
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '14px', fontWeight: '700', color: '#1E293B' }}>{seg.label}</div>
-                      <div style={{ fontSize: '11px', color: '#94A3B8' }}>{seg.sub}</div>
-                    </div>
-                    <div style={{ fontSize: '13px', fontWeight: '800', color: '#5D5C9E', background: '#EEEEF8', padding: '3px 10px', borderRadius: '20px', flexShrink: 0 }}>
-                      {seg.n} {L.dest}
-                    </div>
+
+                    {/* Dropdown selezione clienti */}
+                    {seg.id === 'personale' && active && (
+                      <div ref={dropdownRef} style={{
+                        border: '1.5px solid #6366F1', borderTop: 'none',
+                        borderRadius: '0 0 14px 14px', background: 'white',
+                        maxHeight: '200px', overflowY: 'auto',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                      }}>
+                        {/* Selezione rapida */}
+                        <div style={{ padding: '8px 12px', borderBottom: '1px solid #F1F5F9', display: 'flex', gap: '8px' }}>
+                          <button onClick={() => setClientiSelezionati(clienti.map(c => c.id))}
+                            style={{ fontSize: '11px', fontWeight: '700', color: '#6366F1', background: '#EEEEFD', border: 'none', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer' }}>
+                            {isEn ? 'All' : 'Tutti'}
+                          </button>
+                          <button onClick={() => setClientiSelezionati([])}
+                            style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', background: '#F1F5F9', border: 'none', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer' }}>
+                            {isEn ? 'None' : 'Nessuno'}
+                          </button>
+                        </div>
+                        {clienti?.length === 0 ? (
+                          <div style={{ padding: '16px', textAlign: 'center', color: '#94A3B8', fontSize: '13px' }}>
+                            {isEn ? 'No clients yet.' : 'Nessun cliente.'}
+                          </div>
+                        ) : clienti?.map(c => {
+                          const sel = clientiSelezionati.includes(c.id);
+                          return (
+                            <div key={c.id} onClick={() => toggleClienteSelezionato(c.id)}
+                              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', cursor: 'pointer', background: sel ? '#EEEEFD' : 'white', borderBottom: '1px solid #F8FAFC', transition: 'background 0.1s' }}>
+                              <div style={{ width: '20px', height: '20px', borderRadius: '6px', border: `2px solid ${sel ? '#6366F1' : '#E2E8F0'}`, background: sel ? '#6366F1' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
+                                {sel && <Check size={12} color="white" />}
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: '14px', fontWeight: '700', color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {c.nome}
+                                  {c.vip && <Star size={11} color="#F59E0B" fill="#F59E0B" style={{ marginLeft: '5px', verticalAlign: 'middle' }} />}
+                                </div>
+                                {(c.tel || c.email) && (
+                                  <div style={{ fontSize: '11px', color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {c.tel || c.email}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Avviso nessun VIP */}
+                    {seg.id === 'vip' && active && nVip === 0 && (
+                      <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '10px', padding: '10px 12px', marginTop: '6px', fontSize: '12px', color: '#92400E', fontWeight: '600' }}>
+                        ⭐ {L.noVip}
+                      </div>
+                    )}
                   </div>
                 );
               })}
+
+              {/* Chip clienti selezionati */}
+              {destinatari === 'personale' && clientiSelezionati.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '4px 0' }}>
+                  {clienti?.filter(c => clientiSelezionati.includes(c.id)).map(c => (
+                    <span key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#EEEEFD', color: '#6366F1', fontSize: '12px', fontWeight: '700', borderRadius: '20px', padding: '4px 10px' }}>
+                      {c.nome}
+                      <X size={12} style={{ cursor: 'pointer' }} onClick={() => toggleClienteSelezionato(c.id)} />
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Canali */}
@@ -452,7 +569,7 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
               <span style={{ fontSize: '12px', color: '#5D5C9E', fontWeight: '600', lineHeight: 1.5 }}>{L.infoWa}</span>
             </div>
 
-            {nDest === 0 && (
+            {nDest === 0 && destinatari !== 'personale' && (
               <div style={{ background: '#FEF2F2', borderRadius: '12px', padding: '12px 14px', fontSize: '13px', color: '#EF4444', fontWeight: '600' }}>
                 ⚠️ {L.noDest}
               </div>
@@ -464,7 +581,7 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #F1F5F9' }}>
           <button
             onClick={() => setStep(s => s - 1)}
-            style={{ ...backBtnStyle, visibility: step > 1 ? 'visible' : 'hidden' }}
+            style={{ ...backBtnStyle, visibility: step > 1 && !sent ? 'visible' : 'hidden' }}
           >
             {L.back}
           </button>
@@ -480,11 +597,20 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
           ) : (
             <button
               onClick={handleInvia}
-              disabled={loading || (!canali.whatsapp && !canali.email) || nDest === 0}
-              style={{ ...nextBtnStyle, opacity: (loading || (!canali.whatsapp && !canali.email) || nDest === 0) ? 0.4 : 1, display: 'flex', alignItems: 'center', gap: '8px' }}
+              disabled={loading || sent || (!canali.whatsapp && !canali.email) || (destinatari === 'personale' && clientiSelezionati.length === 0)}
+              style={{
+                ...nextBtnStyle,
+                background: sent ? 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)' : nextBtnStyle.background,
+                opacity: (loading || (!canali.whatsapp && !canali.email) || (destinatari === 'personale' && clientiSelezionati.length === 0)) && !sent ? 0.4 : 1,
+                display: 'flex', alignItems: 'center', gap: '8px',
+                transition: 'background 0.3s',
+              }}
             >
-              <Send size={16} color="white" />
-              {loading ? L.sending : L.send}
+              {sent ? (
+                <>{L.sentOk}</>
+              ) : (
+                <><Send size={16} color="white" /> {loading ? L.sending : L.send}</>
+              )}
             </button>
           )}
         </div>

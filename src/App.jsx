@@ -89,6 +89,10 @@ export default function App() {
     if (!error) setClienti(prev => prev.filter(c => c.id !== id));
     else alert(t('error') + ': ' + error.message);
   };
+  const handleToggleVip = async (id, isVip) => {
+    await supabase.from('clienti').update({ vip: isVip }).eq('id', id);
+    setClienti(prev => prev.map(c => c.id === id ? { ...c, vip: isVip } : c));
+  };
 
   const handleSalvaCliente = async () => {
     if (!formCliente.nome.trim()) return alert(t('rubrica_name') + ' obbligatorio');
@@ -250,6 +254,7 @@ export default function App() {
             setFormCliente={setFormCliente}
             setMostraModuloCliente={setMostraModuloCliente}
             onEliminaCliente={handleElimina}
+            onToggleVip={handleToggleVip}
             isPro={isPro}
             onUpgradePro={handleUpgradePro}
             loadingPro={loadingPro}
