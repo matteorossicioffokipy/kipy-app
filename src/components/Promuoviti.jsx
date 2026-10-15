@@ -190,6 +190,17 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
     caricaPromozioni();
 
     // ── 4. Apri WhatsApp/Email (dopo aver salvato) ──
+    // Su iOS usare un <a> cliccato programmaticamente apre l'app senza navigare la PWA
+    const openLink = (url) => {
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    };
+
     if (canali.whatsapp) {
       const primo = clientiConCanale.find(c => c.tel);
       if (primo) {
@@ -197,8 +208,7 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
           .replace(/\{nome\}/g, primo.nome || '')
           .replace(/\{attività\}/g, config?.nome_azienda || '');
         const tel = primo.tel.replace(/\D/g, '');
-        window.location.href = `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`;
-        return;
+        openLink(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`);
       }
     }
 
@@ -208,7 +218,7 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
         const msg = testo
           .replace(/\{nome\}/g, primo.nome || '')
           .replace(/\{attività\}/g, config?.nome_azienda || '');
-        window.location.href = `mailto:${primo.email}?subject=${encodeURIComponent(titolo)}&body=${encodeURIComponent(msg)}`;
+        openLink(`mailto:${primo.email}?subject=${encodeURIComponent(titolo)}&body=${encodeURIComponent(msg)}`);
       }
     }
   };
