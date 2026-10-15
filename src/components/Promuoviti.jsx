@@ -151,6 +151,19 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
     );
   };
 
+  const resetWizard = () => {
+    setSent(false);
+    setWaUrl('');
+    setStep(1);
+    setTitolo('');
+    setTesto(isEn ? DEFAULT_TESTO_EN : DEFAULT_TESTO_IT);
+    setTemplateId('viola');
+    setFotoUrl(null);
+    setDestinatari('tutti');
+    setClientiSelezionati([]);
+    setCanali({ whatsapp: true, email: false });
+  };
+
   const handleInvia = async () => {
     if (loading) return;
     setLoading(true);
@@ -158,11 +171,29 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
     const clientiConCanale = clientiFiltrati.filter(c =>
       (canali.whatsapp && c.tel) || (canali.email && c.email)
     );
-
     const nDest = clientiConCanale.length;
 
-    // ── 1. Salva su Supabase PRIMA di aprire WhatsApp ──
-    // Su iOS location.href congela la pagina: l'insert non completava mai
+    // Calcola URL prima di salvare (usiamo i valori correnti degli state)
+    let url = '';
+    if (canali.whatsapp) {
+      const primo = clientiConCanale.find(c => c.tel);
+      if (primo) {
+        const msg = testo
+          .replace(/\{nome\}/g, primo.nome || '')
+          .replace(/\{attività\}/g, config?.nome_azienda || '');
+        url = `https://wa.me/${primo.tel.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`;
+      }
+    } else if (canali.email) {
+      const primo = clientiConCanale.find(c => c.email);
+      if (primo) {
+        const msg = testo
+          .replace(/\{nome\}/g, primo.nome || '')
+          .replace(/\{attività\}/g, config?.nome_azienda || '');
+        url = `mailto:${primo.email}?subject=${encodeURIComponent(titolo)}&body=${encodeURIComponent(msg)}`;
+      }
+    }
+
+    // Salva su Supabase
     try {
       await supabase.from('promozioni').insert([{
         user_id: user.id,
@@ -174,41 +205,10 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
         canali: JSON.stringify(canali),
         created_at: new Date().toISOString(),
       }]);
+      caricaPromozioni();
     } catch (_) {}
 
-    // ── 2. Reset wizard ──
-    setLoading(false);
-    setStep(1);
-    setTitolo('');
-    setTesto(isEn ? DEFAULT_TESTO_EN : DEFAULT_TESTO_IT);
-    setTemplateId('viola');
-    setFotoUrl(null);
-    setDestinatari('tutti');
-    setClientiSelezionati([]);
-    setCanali({ whatsapp: true, email: false });
-
-    // ── 3. Ricarica storico ──
-    caricaPromozioni();
-
-    // ── 4. Prepara URL e mostra bottone diretto (come in Rubrica) ──
-    if (canali.whatsapp) {
-      const primo = clientiConCanale.find(c => c.tel);
-      if (primo) {
-        const msg = testo
-          .replace(/\{nome\}/g, primo.nome || '')
-          .replace(/\{attività\}/g, config?.nome_azienda || '');
-        const tel = primo.tel.replace(/\D/g, '');
-        setWaUrl(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`);
-      }
-    } else if (canali.email) {
-      const primo = clientiConCanale.find(c => c.email);
-      if (primo) {
-        const msg = testo
-          .replace(/\{nome\}/g, primo.nome || '')
-          .replace(/\{attività\}/g, config?.nome_azienda || '');
-        setWaUrl(`mailto:${primo.email}?subject=${encodeURIComponent(titolo)}&body=${encodeURIComponent(msg)}`);
-      }
-    }
+    setWaUrl(url);
     setSent(true);
     setLoading(false);
   };
@@ -606,45 +606,42 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
               {L.next} <ChevronRight size={16} color="white" />
             </button>
           ) : (
-            <button
-              onClick={handleInvia}
-              disabled={loading || sent || (!canali.whatsapp && !canali.email) || (destinatari === 'personale' && clientiSelezionati.length === 0)}
-              style={{
-                ...nextBtnStyle,
-                background: sent ? 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)' : nextBtnStyle.background,
-                opacity: (loading || (!canali.whatsapp && !canali.email) || (destinatari === 'personale' && clientiSelezionati.length === 0)) && !sent ? 0.4 : 1,
-                display: 'flex', alignItems: 'center', gap: '8px',
-                transition: 'background 0.3s',
-              }}
-            >
-              {!sent && (
-                <><Send size={16} color="white" /> {loading ? L.sending : L.send}</>
-              )}
-            </button>
-          )}
-          {sent && waUrl && (
+            {sent && waUrl ? (
             <a
               href={waUrl}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => {
-                setTimeout(() => {
-                  setSent(false);
-                  setWaUrl('');
-                  setStep(1);
-                  setTitolo('');
-                  setTesto(isEn ? DEFAULT_TESTO_EN : DEFAULT_TESTO_IT);
-                  setTemplateId('viola');
-                  setFotoUrl(null);
-                  setDestinatari('tutti');
-                  setClientiSelezionati([]);
-                  setCanali({ whatsapp: true, email: false });
-                }, 300);
+              onClick={() => setTimeout(resetWizard, 300)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                textDecoration: 'none', padding: '12px 20px', borderRadius: '14px',
+                color: 'white', fontWeight: '700', fontSize: '15px',
+                background: canali.whatsapp
+                  ? 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)'
+                  : 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
               }}
-              style={{ ...nextBtnStyle, background: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', padding: '12px 20px', borderRadius: '14px', color: 'white', fontWeight: '700', fontSize: '15px' }}
             >
-              <MessageCircle size={16} color="white" /> {canali.whatsapp ? 'Apri WhatsApp' : 'Apri Email'}
+              {canali.whatsapp ? <><MessageCircle size={16} color="white" /> Apri WhatsApp</> : <><Mail size={16} color="white" /> Apri Email</>}
             </a>
+            ) : (
+            <button
+              onClick={handleInvia}
+              disabled={loading || (!canali.whatsapp && !canali.email) || (destinatari === 'personale' && clientiSelezionati.length === 0)}
+              style={{
+                ...nextBtnStyle,
+                background: canali.whatsapp
+                  ? 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)'
+                  : canali.email
+                  ? 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)'
+                  : nextBtnStyle.background,
+                opacity: (loading || (!canali.whatsapp && !canali.email) || (destinatari === 'personale' && clientiSelezionati.length === 0)) ? 0.4 : 1,
+                display: 'flex', alignItems: 'center', gap: '8px',
+              }}
+            >
+              <Send size={16} color="white" />
+              {loading ? L.sending : canali.whatsapp ? 'Invia con WhatsApp' : canali.email ? 'Invia con Email' : L.send}
+            </button>
+            )}
           )}
         </div>
       </div>
