@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import mascotSaluto from '../assets/mascot-saluto.png';
 import {
   Megaphone, Send, Mail, MessageCircle, Users, Moon, Star,
   Image, Check, ChevronRight, Info, UserCheck, ChevronDown, X
@@ -60,7 +59,6 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
   const [clientiSelezionati, setClientiSelezionati] = useState([]); // per "personale"
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [canali, setCanali] = useState({ whatsapp: true, email: false });
-  const [loading, setLoading] = useState(false);
   const [urlPronto, setUrlPronto] = useState('');
   const [promozioni, setPromozioni] = useState([]);
   const [loadingPromo, setLoadingPromo] = useState(true);
@@ -94,6 +92,20 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
   useEffect(() => {
     setTesto(isEn ? DEFAULT_TESTO_EN : DEFAULT_TESTO_IT);
   }, [lang]);
+
+  // Salva automaticamente su Supabase quando l'utente arriva allo step 3
+  useEffect(() => {
+    if (step !== 3 || !user || !titolo.trim() || !testo.trim()) return;
+    const clientiConCanale = clientiFiltrati.filter(c =>
+      (canali.whatsapp && c.tel) || (canali.email && c.email)
+    );
+    const nDest = clientiConCanale.length;
+    supabase.from('promozioni').insert([{
+      user_id: user.id, titolo, testo, template_id: templateId,
+      destinatari, n_destinatari: nDest, canali: JSON.stringify(canali),
+      created_at: new Date().toISOString(),
+    }]).then(() => caricaPromozioni()).catch(() => {});
+  }, [step]);
 
   // Chiudi dropdown cliccando fuori
   useEffect(() => {
@@ -161,7 +173,6 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
     setClientiSelezionati([]);
     setCanali({ whatsapp: true, email: false });
     setUrlPronto('');
-    setLoading(false);
   };
 
   const calcolaUrl = () => {
@@ -188,25 +199,9 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
     return '';
   };
 
-  // Salva su Supabase con await, poi mostra il bottone <a> per aprire WhatsApp/Email
-  const handleInvia = async () => {
-    if (loading) return;
-    setLoading(true);
-    const url = calcolaUrl();
-    const clientiConCanale = clientiFiltrati.filter(c =>
-      (canali.whatsapp && c.tel) || (canali.email && c.email)
-    );
-    const nDest = clientiConCanale.length;
-    try {
-      await supabase.from('promozioni').insert([{
-        user_id: user.id, titolo, testo, template_id: templateId,
-        destinatari, n_destinatari: nDest, canali: JSON.stringify(canali),
-        created_at: new Date().toISOString(),
-      }]);
-      caricaPromozioni();
-    } catch (_) {}
-    setLoading(false);
-    setUrlPronto(url);
+  // Mostra il link per aprire WhatsApp/Email (il salvataggio è già avvenuto all'arrivo allo step 3)
+  const handleInvia = () => {
+    setUrlPronto(calcolaUrl());
   };
 
   const L = {
@@ -272,21 +267,6 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
 
-      {/* ── OVERLAY SALVATAGGIO ── */}
-      {loading && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 999,
-          background: 'rgba(93,92,158,0.82)', backdropFilter: 'blur(6px)',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px',
-          animation: 'fadeInUp 0.3s ease both',
-        }}>
-          <img src={mascotSaluto} alt="quokka" style={{ width: '90px', height: 'auto', filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.2))' }} />
-          <div style={{ color: 'white', fontFamily: "'Baloo 2', sans-serif", fontWeight: '700', fontSize: '17px' }}>
-            {isEn ? 'Saving...' : 'Salvataggio...'}
-          </div>
-          <span style={{ width: 28, height: 28, border: '3px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
-        </div>
-      )}
 
       {/* ── HEADER ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
@@ -643,7 +623,7 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
           ) : (
             <button
               onClick={handleInvia}
-              disabled={loading || (!canali.whatsapp && !canali.email) || (destinatari === 'personale' && clientiSelezionati.length === 0)}
+              disabled={(!canali.whatsapp && !canali.email) || (destinatari === 'personale' && clientiSelezionati.length === 0)}
               style={{
                 ...nextBtnStyle,
                 background: canali.whatsapp
@@ -651,13 +631,11 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
                   : canali.email
                   ? 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)'
                   : nextBtnStyle.background,
-                opacity: (loading || (!canali.whatsapp && !canali.email) || (destinatari === 'personale' && clientiSelezionati.length === 0)) ? 0.4 : 1,
+                opacity: ((!canali.whatsapp && !canali.email) || (destinatari === 'personale' && clientiSelezionati.length === 0)) ? 0.4 : 1,
                 display: 'flex', alignItems: 'center', gap: '8px',
               }}
             >
-              {loading
-                ? <><span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} /> Salvataggio...</>
-                : canali.whatsapp ? <><MessageCircle size={16} color="white" /> Invia con WhatsApp</>
+              {canali.whatsapp ? <><MessageCircle size={16} color="white" /> Invia con WhatsApp</>
                 : canali.email ? <><Mail size={16} color="white" /> Invia con Email</>
                 : <><Send size={16} color="white" /> {L.send}</>
               }
