@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Megaphone, Send, Mail, MessageCircle, Users, Star,
   Check, ChevronRight, Info, UserCheck, X, Plus,
-  Pencil, Trash2, BookOpen, Clock, ChevronDown, Tag,
+  Pencil, Trash2, BookOpen, Clock, ChevronDown, Tag, Image, Upload,
 } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 
@@ -108,6 +108,9 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
   const [testo, setTesto] = useState(isEn ? DEFAULT_TESTO_EN : DEFAULT_TESTO_IT);
   const [codiceSconto, setCodiceSconto] = useState('');
   const [canali, setCanali] = useState({ whatsapp: true, email: false });
+  const [fotoUrl, setFotoUrl] = useState('');        // URL immagine salvata
+  const [fotoUploading, setFotoUploading] = useState(false);
+  const fotoInputRef = useRef(null);
 
   // Invio (bottom sheet)
   const [sheetPromo, setSheetPromo] = useState(null); // promo da inviare
@@ -186,6 +189,7 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
       canali: JSON.stringify(canali),
       created_at: new Date().toISOString(),
     };
+    if (fotoUrl) record.foto_url = fotoUrl;
     try {
       if (editId) {
         await supabase.from('promozioni').update(record).eq('id', editId);
@@ -212,6 +216,7 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
     setTitolo(p.titolo || '');
     setTesto(p.testo || '');
     setCodiceSconto(p.codice_sconto || '');
+    setFotoUrl(p.foto_url || '');
     try { setCanali(JSON.parse(p.canali)); } catch { setCanali({ whatsapp: true, email: false }); }
     setTab(1);
   };
@@ -224,6 +229,7 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
     setCodiceSconto('');
     setCanali({ whatsapp: true, email: false });
     setMostraIcone(false);
+    setFotoUrl('');
   };
 
   // ── INVIA ─────────────────────────────────────────────────────────────
@@ -355,6 +361,27 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
     no:           isEn ? 'Cancel'                      : 'Annulla',
     iconeScegli:  isEn ? 'Choose an icon'              : 'Scegli un\'icona',
     iconeLabel:   isEn ? 'Icon (optional)'             : 'Icona (facoltativa)',
+    fotoLabel:    isEn ? 'Photo (optional)'            : 'Foto (facoltativa)',
+    fotoBtn:      isEn ? 'Upload photo'                : 'Carica foto',
+    fotoChange:   isEn ? 'Change'                      : 'Cambia',
+    fotoRemove:   isEn ? 'Remove'                      : 'Rimuovi',
+    fotoUpl:      isEn ? 'Uploading…'                  : 'Caricamento…',
+  };
+
+  // ── UPLOAD FOTO ───────────────────────────────────────────────────────
+  const uploadFoto = async (file) => {
+    if (!file || !supabase || !user) return;
+    setFotoUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `promozioni/${user.id}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from('promo-foto').upload(path, file, { upsert: true });
+      if (!error) {
+        const { data: urlData } = supabase.storage.from('promo-foto').getPublicUrl(path);
+        setFotoUrl(urlData?.publicUrl || '');
+      }
+    } catch { /* silent */ }
+    setFotoUploading(false);
   };
 
   const tabLabels = [
@@ -419,10 +446,14 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
                   : '';
                 return (
                   <div key={p.id} style={{ ...card, display: 'flex', alignItems: 'flex-start', gap: '12px', animation: 'fadeInUp 0.2s ease' }}>
-                    {/* Icona promo */}
-                    <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: '#EEEDF7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>
-                      {p.icona || '🎁'}
-                    </div>
+                    {/* Icona / foto promo */}
+                    {p.foto_url ? (
+                      <img src={p.foto_url} alt={p.titolo} style={{ width: '44px', height: '44px', borderRadius: '14px', objectFit: 'cover', flexShrink: 0 }} />
+                    ) : (
+                      <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: '#EEEDF7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>
+                        {p.icona || '🎁'}
+                      </div>
+                    )}
 
                     {/* Info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -532,6 +563,40 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
               {codiceSconto && (
                 <div style={{ fontSize: '11px', color: '#92400E', background: '#FFFBEB', borderRadius: '8px', padding: '6px 10px', marginTop: '6px', fontWeight: '600' }}>
                   {isEn ? 'In the message, use {codice} where you want to insert this code.' : 'Nel messaggio usa {codice} dove vuoi inserire questo codice.'}
+                </div>
+              )}
+            </div>
+
+            {/* Foto */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelSt}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Image size={13} color="#5D5C9E" />{L.fotoLabel}
+                </span>
+              </label>
+              <input ref={fotoInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+                onChange={e => { if (e.target.files?.[0]) uploadFoto(e.target.files[0]); }} />
+              {!fotoUrl ? (
+                <button onClick={() => fotoInputRef.current?.click()} disabled={fotoUploading}
+                  style={{ width: '100%', padding: '18px', border: '2px dashed #E2E8F0', borderRadius: '14px', background: '#F8FAFC', cursor: fotoUploading ? 'default' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', fontFamily: "'Baloo 2',sans-serif" }}>
+                  {fotoUploading
+                    ? <><Upload size={22} color="#94A3B8" /><span style={{ fontSize: '13px', color: '#94A3B8', fontWeight: '600' }}>{L.fotoUpl}</span></>
+                    : <><Image size={22} color="#94A3B8" /><span style={{ fontSize: '13px', color: '#94A3B8', fontWeight: '600' }}>{L.fotoBtn}</span></>
+                  }
+                </button>
+              ) : (
+                <div style={{ position: 'relative', borderRadius: '14px', overflow: 'hidden', border: '2px solid #5D5C9E' }}>
+                  <img src={fotoUrl} alt="promo" style={{ width: '100%', maxHeight: '160px', objectFit: 'cover', display: 'block' }} />
+                  <div style={{ position: 'absolute', top: '8px', right: '8px', display: 'flex', gap: '6px' }}>
+                    <button onClick={() => fotoInputRef.current?.click()}
+                      style={{ padding: '5px 10px', borderRadius: '8px', border: 'none', background: 'rgba(255,255,255,0.9)', fontSize: '11px', fontWeight: '700', color: '#5D5C9E', cursor: 'pointer', fontFamily: "'Baloo 2',sans-serif" }}>
+                      {L.fotoChange}
+                    </button>
+                    <button onClick={() => setFotoUrl('')}
+                      style={{ width: '28px', height: '28px', borderRadius: '8px', border: 'none', background: 'rgba(239,68,68,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                      <X size={14} color="white" />
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
