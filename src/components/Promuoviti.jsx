@@ -61,6 +61,7 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
   const [canali, setCanali] = useState({ whatsapp: true, email: false });
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [waUrl, setWaUrl] = useState('');
   const [promozioni, setPromozioni] = useState([]);
   const [loadingPromo, setLoadingPromo] = useState(true);
   const dropdownRef = useRef(null);
@@ -189,18 +190,7 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
     // ── 3. Ricarica storico ──
     caricaPromozioni();
 
-    // ── 4. Apri WhatsApp/Email (dopo aver salvato) ──
-    // Su iOS usare un <a> cliccato programmaticamente apre l'app senza navigare la PWA
-    const openLink = (url) => {
-      const a = document.createElement('a');
-      a.href = url;
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    };
-
+    // ── 4. Prepara URL e mostra bottone diretto (come in Rubrica) ──
     if (canali.whatsapp) {
       const primo = clientiConCanale.find(c => c.tel);
       if (primo) {
@@ -208,19 +198,19 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
           .replace(/\{nome\}/g, primo.nome || '')
           .replace(/\{attività\}/g, config?.nome_azienda || '');
         const tel = primo.tel.replace(/\D/g, '');
-        openLink(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`);
+        setWaUrl(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`);
       }
-    }
-
-    if (canali.email) {
+    } else if (canali.email) {
       const primo = clientiConCanale.find(c => c.email);
       if (primo) {
         const msg = testo
           .replace(/\{nome\}/g, primo.nome || '')
           .replace(/\{attività\}/g, config?.nome_azienda || '');
-        openLink(`mailto:${primo.email}?subject=${encodeURIComponent(titolo)}&body=${encodeURIComponent(msg)}`);
+        setWaUrl(`mailto:${primo.email}?subject=${encodeURIComponent(titolo)}&body=${encodeURIComponent(msg)}`);
       }
     }
+    setSent(true);
+    setLoading(false);
   };
 
   const L = {
@@ -627,12 +617,34 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
                 transition: 'background 0.3s',
               }}
             >
-              {sent ? (
-                <>{L.sentOk}</>
-              ) : (
+              {!sent && (
                 <><Send size={16} color="white" /> {loading ? L.sending : L.send}</>
               )}
             </button>
+          )}
+          {sent && waUrl && (
+            <a
+              href={waUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => {
+                setTimeout(() => {
+                  setSent(false);
+                  setWaUrl('');
+                  setStep(1);
+                  setTitolo('');
+                  setTesto(isEn ? DEFAULT_TESTO_EN : DEFAULT_TESTO_IT);
+                  setTemplateId('viola');
+                  setFotoUrl(null);
+                  setDestinatari('tutti');
+                  setClientiSelezionati([]);
+                  setCanali({ whatsapp: true, email: false });
+                }, 300);
+              }}
+              style={{ ...nextBtnStyle, background: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', padding: '12px 20px', borderRadius: '14px', color: 'white', fontWeight: '700', fontSize: '15px' }}
+            >
+              <MessageCircle size={16} color="white" /> {canali.whatsapp ? 'Apri WhatsApp' : 'Apri Email'}
+            </a>
           )}
         </div>
       </div>
