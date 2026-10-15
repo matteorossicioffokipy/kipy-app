@@ -1,33 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Megaphone, Send, Mail, MessageCircle, Users, Moon, Star,
-  Image, Check, ChevronRight, Info, UserCheck, ChevronDown, X
+  Megaphone, Send, Mail, MessageCircle, Users, Star,
+  Check, ChevronRight, Info, UserCheck, X, Plus,
+  Pencil, Trash2, BookOpen, Clock, ChevronDown, Tag,
 } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 
-// ── TEMPLATES ──────────────────────────────────────────────────────────────
-const TEMPLATES = [
-  {
-    id: 'viola',
-    label: { it: 'Classico', en: 'Classic' },
-    bg: 'linear-gradient(135deg, #5D5C9E 0%, #4a4980 100%)',
-    accent: '#fff',
-    dot: '#5D5C9E',
-  },
-  {
-    id: 'verde',
-    label: { it: 'Natura', en: 'Nature' },
-    bg: 'linear-gradient(135deg, #15803D 0%, #166534 100%)',
-    accent: '#fff',
-    dot: '#15803D',
-  },
-  {
-    id: 'arancio',
-    label: { it: 'Energia', en: 'Energy' },
-    bg: 'linear-gradient(135deg, #EA580C 0%, #C2410C 100%)',
-    accent: '#fff',
-    dot: '#EA580C',
-  },
+// ── ICONE EMOJI disponibili per personalizzare la promo ────────────────────
+const ICONE_PROMO = [
+  '🎁','🌸','⚡','🎉','🔥','💫','🌟','✨','🎊','💎',
+  '🌈','🍀','🎯','🏷️','💰','🛍️','🎀','🌺','🍾','🥳',
 ];
 
 const DEFAULT_TESTO_IT = `Ciao {nome}! 🎁
@@ -46,227 +28,348 @@ Valid until 31 Dec. Book now! 👇
 
 — {attività}`;
 
+// ── STYLES ────────────────────────────────────────────────────────────────
+const card = {
+  background: 'white',
+  borderRadius: '22px',
+  padding: '18px',
+  boxShadow: '0 2px 12px rgba(93,92,158,0.08)',
+  border: '1px solid rgba(93,92,158,0.1)',
+};
+const inputSt = {
+  width: '100%', padding: '11px 14px',
+  border: '1.5px solid #E2E8F0', borderRadius: '12px',
+  fontFamily: "'Baloo 2', sans-serif", fontSize: '14px',
+  color: '#1E293B', background: '#F8FAFC',
+  outline: 'none', boxSizing: 'border-box',
+};
+const labelSt = {
+  fontSize: '12px', fontWeight: '700', color: '#1E293B',
+  fontFamily: "'Baloo 2', sans-serif", marginBottom: '6px', display: 'block',
+};
+const btnViolaSt = {
+  background: 'linear-gradient(135deg, #5D5C9E 0%, #4a4980 100%)',
+  color: 'white', border: 'none', borderRadius: '12px',
+  padding: '11px 20px', fontFamily: "'Baloo 2', sans-serif",
+  fontSize: '14px', fontWeight: '700', cursor: 'pointer',
+  boxShadow: '0 4px 12px rgba(93,92,158,0.25)',
+  display: 'flex', alignItems: 'center', gap: '6px',
+};
+const btnSecSt = {
+  background: 'none', border: '1.5px solid #E2E8F0',
+  borderRadius: '10px', padding: '9px 16px',
+  fontFamily: "'Baloo 2', sans-serif", fontSize: '13px',
+  fontWeight: '700', color: '#94A3B8', cursor: 'pointer',
+  display: 'flex', alignItems: 'center', gap: '6px',
+};
+
+// ── TAB BAR ───────────────────────────────────────────────────────────────
+function TabBar({ active, onChange, labels }) {
+  return (
+    <div style={{ display: 'flex', borderBottom: '1.5px solid #F1F5F9', marginBottom: '18px', gap: '0' }}>
+      {labels.map((l, i) => (
+        <button key={i} onClick={() => onChange(i)}
+          style={{
+            flex: 1, padding: '10px 6px', fontFamily: "'Baloo 2', sans-serif",
+            fontSize: '13px', fontWeight: '700', border: 'none', background: 'none',
+            color: active === i ? '#5D5C9E' : '#94A3B8', cursor: 'pointer',
+            borderBottom: `2.5px solid ${active === i ? '#5D5C9E' : 'transparent'}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+            transition: 'color 0.15s',
+          }}>
+          {l}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── COMPONENTE PRINCIPALE ─────────────────────────────────────────────────
 export default function Promuoviti({ supabase, user, clienti, config }) {
   const { lang, t } = useLang();
   const isEn = lang === 'en';
 
-  const [step, setStep] = useState(1);
+  // Tab attivo: 0=Libreria, 1=Crea/Modifica, 2=Storico
+  const [tab, setTab] = useState(0);
+
+  // Lista promozioni salvate (libreria)
+  const [libreria, setLibreria] = useState([]);
+  const [loadingLib, setLoadingLib] = useState(true);
+
+  // Lista invii (storico)
+  const [storico, setStorico] = useState([]);
+  const [loadingSto, setLoadingSto] = useState(true);
+
+  // Form crea/modifica
+  const [editId, setEditId] = useState(null); // null = nuovo
+  const [iconaPromo, setIconaPromo] = useState('🎁');
+  const [mostraIcone, setMostraIcone] = useState(false);
   const [titolo, setTitolo] = useState('');
   const [testo, setTesto] = useState(isEn ? DEFAULT_TESTO_EN : DEFAULT_TESTO_IT);
-  const [templateId, setTemplateId] = useState('viola');
-  const [fotoUrl, setFotoUrl] = useState(null);
-  const [destinatari, setDestinatari] = useState('tutti');
-  const [clientiSelezionati, setClientiSelezionati] = useState([]); // per "personale"
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [codiceSconto, setCodiceSconto] = useState('');
   const [canali, setCanali] = useState({ whatsapp: true, email: false });
+
+  // Invio (bottom sheet)
+  const [sheetPromo, setSheetPromo] = useState(null); // promo da inviare
+  const [destinatari, setDestinatari] = useState('tutti');
+  const [clientiSelezionati, setClientiSelezionati] = useState([]);
+  const [dropdownClienti, setDropdownClienti] = useState(false);
   const [urlPronto, setUrlPronto] = useState('');
-  const [promozioni, setPromozioni] = useState([]);
-  const [loadingPromo, setLoadingPromo] = useState(true);
-  const dropdownRef = useRef(null);
+  const dropRef = useRef(null);
 
-  const tpl = TEMPLATES.find(tp => tp.id === templateId);
+  // Conferma eliminazione
+  const [deleteId, setDeleteId] = useState(null);
 
-  const caricaPromozioni = () => {
+  const isEn_ = isEn;
+
+  // ── HELPERS SUPABASE ───────────────────────────────────────────────────
+  const caricaLibreria = () => {
     if (!supabase || !user) return;
-    supabase
-      .from('promozioni')
+    supabase.from('promozioni')
       .select('*')
       .eq('user_id', user.id)
+      .eq('tipo', 'libreria')
       .order('created_at', { ascending: false })
-      .limit(10)
-      .then(({ data }) => { setPromozioni(data || []); setLoadingPromo(false); })
-      .catch(() => setLoadingPromo(false));
+      .then(({ data }) => { setLibreria(data || []); setLoadingLib(false); })
+      .catch(() => setLoadingLib(false));
   };
 
-  useEffect(() => {
-    caricaPromozioni();
-  }, [user]);
+  const caricaStorico = () => {
+    if (!supabase || !user) return;
+    supabase.from('promozioni')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('tipo', 'storico')
+      .order('created_at', { ascending: false })
+      .limit(30)
+      .then(({ data }) => { setStorico(data || []); setLoadingSto(false); })
+      .catch(() => setLoadingSto(false));
+  };
 
-  // Ricarica storico quando l'utente torna sull'app (dopo WhatsApp)
+  useEffect(() => { caricaLibreria(); caricaStorico(); }, [user]);
+
+  // Ricarica quando torna visibile (es. dopo WhatsApp)
   useEffect(() => {
-    const onVisible = () => { if (document.visibilityState === 'visible') caricaPromozioni(); };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        caricaLibreria();
+        caricaStorico();
+      }
+    };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [user]);
 
+  // Aggiorna testo default al cambio lingua
   useEffect(() => {
-    setTesto(isEn ? DEFAULT_TESTO_EN : DEFAULT_TESTO_IT);
+    if (!editId) setTesto(isEn ? DEFAULT_TESTO_EN : DEFAULT_TESTO_IT);
   }, [lang]);
-
-  // Salva automaticamente su Supabase quando l'utente arriva allo step 3
-  useEffect(() => {
-    if (step !== 3 || !user || !titolo.trim() || !testo.trim()) return;
-    const clientiConCanale = clientiFiltrati.filter(c =>
-      (canali.whatsapp && c.tel) || (canali.email && c.email)
-    );
-    const nDest = clientiConCanale.length;
-    supabase.from('promozioni').insert([{
-      user_id: user.id, titolo, testo, template_id: templateId,
-      destinatari, n_destinatari: nDest, canali: JSON.stringify(canali),
-      created_at: new Date().toISOString(),
-    }]).then(() => caricaPromozioni()).catch(() => {});
-  }, [step]);
 
   // Chiudi dropdown cliccando fuori
   useEffect(() => {
-    if (!dropdownOpen) return;
-    const handler = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [dropdownOpen]);
+    if (!dropdownClienti) return;
+    const h = (e) => { if (dropRef.current && !dropRef.current.contains(e.target)) setDropdownClienti(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [dropdownClienti]);
 
-  const handleFoto = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => setFotoUrl(ev.target.result);
-    reader.readAsDataURL(file);
+  // ── SALVA PROMO IN LIBRERIA ───────────────────────────────────────────
+  const salvaInLibreria = async () => {
+    if (!titolo.trim() || !testo.trim()) return;
+    const record = {
+      user_id: user.id,
+      tipo: 'libreria',
+      icona: iconaPromo,
+      titolo,
+      testo,
+      codice_sconto: codiceSconto.trim() || null,
+      canali: JSON.stringify(canali),
+      created_at: new Date().toISOString(),
+    };
+    try {
+      if (editId) {
+        await supabase.from('promozioni').update(record).eq('id', editId);
+      } else {
+        await supabase.from('promozioni').insert([record]);
+      }
+      caricaLibreria();
+      resetForm();
+      setTab(0);
+    } catch (e) { /* silent */ }
   };
 
+  // ── ELIMINA ───────────────────────────────────────────────────────────
+  const eliminaPromo = async (id) => {
+    await supabase.from('promozioni').delete().eq('id', id);
+    caricaLibreria();
+    setDeleteId(null);
+  };
+
+  // ── APRI MODIFICA ─────────────────────────────────────────────────────
+  const apriModifica = (p) => {
+    setEditId(p.id);
+    setIconaPromo(p.icona || '🎁');
+    setTitolo(p.titolo || '');
+    setTesto(p.testo || '');
+    setCodiceSconto(p.codice_sconto || '');
+    try { setCanali(JSON.parse(p.canali)); } catch { setCanali({ whatsapp: true, email: false }); }
+    setTab(1);
+  };
+
+  const resetForm = () => {
+    setEditId(null);
+    setIconaPromo('🎁');
+    setTitolo('');
+    setTesto(isEn ? DEFAULT_TESTO_EN : DEFAULT_TESTO_IT);
+    setCodiceSconto('');
+    setCanali({ whatsapp: true, email: false });
+    setMostraIcone(false);
+  };
+
+  // ── INVIA ─────────────────────────────────────────────────────────────
   const nVip = clienti?.filter(c => c.vip)?.length || 0;
-  const nInattivi = clienti?.filter(c => !c.ultimo_appuntamento ||
-    new Date(c.ultimo_appuntamento) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))?.length || 0;
 
   const clientiFiltrati = (() => {
     if (!clienti?.length) return [];
     if (destinatari === 'tutti') return clienti;
     if (destinatari === 'vip') return clienti.filter(c => c.vip);
-    if (destinatari === 'personale') return clienti.filter(c => clientiSelezionati.includes(c.id));
-    return clienti.filter(c => !c.ultimo_appuntamento ||
-      new Date(c.ultimo_appuntamento) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
+    if (destinatari === 'seleziona') return clienti.filter(c => clientiSelezionati.includes(c.id));
+    return clienti;
   })();
 
-  const nDest = clientiFiltrati.length;
+  const calcolaUrl = (promo) => {
+    const tplTesto = promo.testo || '';
+    const codiceTesto = promo.codice_sconto ? promo.codice_sconto : '';
+    let canaliP = {};
+    try { canaliP = JSON.parse(promo.canali); } catch { canaliP = { whatsapp: true }; }
 
-  const testoAnteprima = testo
-    .replace(/\{nome\}/g, isEn ? 'Emma' : 'Giulia')
-    .replace(/\{attività\}/g, config?.nome_azienda || (isEn ? 'My Business' : 'La mia attività'));
-
-  const canProceed = () => {
-    if (step === 1) return titolo.trim().length > 0 && testo.trim().length > 0;
-    if (step === 2) return true;
-    if (step === 3) {
-      if (!(canali.whatsapp || canali.email)) return false;
-      if (destinatari === 'personale' && clientiSelezionati.length === 0) return false;
-      return true;
-    }
-    return false;
-  };
-
-  const toggleClienteSelezionato = (id) => {
-    setClientiSelezionati(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
-  };
-
-  const resetWizard = () => {
-    setStep(1);
-    setTitolo('');
-    setTesto(isEn ? DEFAULT_TESTO_EN : DEFAULT_TESTO_IT);
-    setTemplateId('viola');
-    setFotoUrl(null);
-    setDestinatari('tutti');
-    setClientiSelezionati([]);
-    setCanali({ whatsapp: true, email: false });
-    setUrlPronto('');
-  };
-
-  const calcolaUrl = () => {
     const clientiConCanale = clientiFiltrati.filter(c =>
-      (canali.whatsapp && c.tel) || (canali.email && c.email)
+      (canaliP.whatsapp && c.tel) || (canaliP.email && c.email)
     );
-    if (canali.whatsapp) {
+
+    if (canaliP.whatsapp) {
       const primo = clientiConCanale.find(c => c.tel);
       if (primo) {
-        const msg = testo
+        const msg = tplTesto
           .replace(/\{nome\}/g, primo.nome || '')
-          .replace(/\{attività\}/g, config?.nome_azienda || '');
+          .replace(/\{attività\}/g, config?.nome_azienda || '')
+          .replace(/\{codice\}/g, codiceTesto);
         return `https://wa.me/${primo.tel.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`;
       }
-    } else if (canali.email) {
+    } else if (canaliP.email) {
       const primo = clientiConCanale.find(c => c.email);
       if (primo) {
-        const msg = testo
+        const msg = tplTesto
           .replace(/\{nome\}/g, primo.nome || '')
-          .replace(/\{attività\}/g, config?.nome_azienda || '');
-        return `mailto:${primo.email}?subject=${encodeURIComponent(titolo)}&body=${encodeURIComponent(msg)}`;
+          .replace(/\{attività\}/g, config?.nome_azienda || '')
+          .replace(/\{codice\}/g, codiceTesto);
+        return `mailto:${primo.email}?subject=${encodeURIComponent(promo.titolo)}&body=${encodeURIComponent(msg)}`;
       }
     }
     return '';
   };
 
-  // Mostra il link per aprire WhatsApp/Email (il salvataggio è già avvenuto all'arrivo allo step 3)
-  const handleInvia = () => {
-    setUrlPronto(calcolaUrl());
+  const apriSheet = (promo) => {
+    setSheetPromo(promo);
+    setDestinatari('tutti');
+    setClientiSelezionati([]);
+    setUrlPronto('');
   };
 
+  const handleInviaSheet = () => {
+    if (!sheetPromo) return;
+    setUrlPronto(calcolaUrl(sheetPromo));
+  };
+
+  // Salva in storico quando si apre il link
+  const onOpenLink = async () => {
+    if (!sheetPromo || !user) return;
+    const nDest = clientiFiltrati.filter(c => {
+      let cp = {};
+      try { cp = JSON.parse(sheetPromo.canali); } catch {}
+      return (cp.whatsapp && c.tel) || (cp.email && c.email);
+    }).length;
+    try {
+      await supabase.from('promozioni').insert([{
+        user_id: user.id,
+        tipo: 'storico',
+        icona: sheetPromo.icona || '🎁',
+        titolo: sheetPromo.titolo,
+        testo: sheetPromo.testo,
+        codice_sconto: sheetPromo.codice_sconto,
+        destinatari,
+        n_destinatari: nDest,
+        canali: sheetPromo.canali,
+        created_at: new Date().toISOString(),
+      }]);
+      caricaStorico();
+    } catch { /* silent */ }
+    setTimeout(() => {
+      setSheetPromo(null);
+      setUrlPronto('');
+    }, 600);
+  };
+
+  // ── LABELS ───────────────────────────────────────────────────────────
   const L = {
-    title:        isEn ? 'Promote Yourself'                          : 'Promuoviti',
-    sub:          isEn ? 'Create a promotion and send it to clients.' : 'Crea una promozione e inviala ai tuoi clienti.',
-    step1:        isEn ? 'Write your promotion'                      : 'Scrivi la tua promozione',
-    step1sub:     isEn ? 'The client\'s name will be added automatically where you see {nome}.' : 'Il nome del cliente verrà inserito automaticamente dove vedi {nome}.',
-    step2:        isEn ? 'Choose a template'                         : 'Scegli un template',
-    step2sub:     isEn ? 'Optional: add a photo.'                    : 'Opzionale: aggiungi una foto.',
-    step3:        isEn ? 'Recipients & channel'                      : 'Destinatari e canale',
-    step3sub:     isEn ? 'Who receives it and how.'                  : 'Chi lo riceve e come.',
-    lblTitolo:    isEn ? 'Promotion title'                           : 'Titolo promozione',
-    lblTesto:     isEn ? 'Message'                                   : 'Messaggio',
-    pTitle:       isEn ? 'E.g. Christmas offer — 30% off'           : 'Es. Offerta Natale — 30% di sconto',
-    varHint:      isEn ? 'ℹ️  {nome} = client name · {attività} = your business name' : 'ℹ️  {nome} = nome del cliente · {attività} = nome della tua attività',
-    addPhoto:     isEn ? 'Add a photo (optional)'                    : 'Aggiungi una foto (opzionale)',
-    photoAdded:   isEn ? 'Photo added ✓'                            : 'Foto aggiunta ✓',
-    preview:      isEn ? 'Preview'                                   : 'Anteprima',
-    tuttiLbl:     isEn ? 'All clients'                               : 'Tutti i clienti',
-    tuttiSub:     isEn ? 'Send to your entire contact list'          : 'Invia a tutta la rubrica',
-    inativiLbl:   isEn ? 'Inactive clients'                         : 'Clienti inattivi',
-    inativiSub:   isEn ? 'No appointment in 30+ days'               : 'Nessun appuntamento da 30+ giorni',
+    title:        isEn ? 'Promote Yourself'           : 'Promuoviti',
+    sub:          isEn ? 'Your saved promotions'       : 'Le tue promozioni salvate',
+    tabLib:       isEn ? 'Library'                     : 'Libreria',
+    tabCrea:      isEn ? 'Create'                      : 'Crea',
+    tabSto:       isEn ? 'History'                     : 'Storico',
+    btnNew:       isEn ? 'New promotion'               : 'Nuova promozione',
+    emptyLib:     isEn ? 'No promotions saved yet.'    : 'Nessuna promozione salvata ancora.',
+    emptyLibSub:  isEn ? 'Create your first template.' : 'Crea il tuo primo template.',
+    emptyHist:    isEn ? 'No promotions sent yet.'     : 'Nessuna promozione inviata ancora.',
+    lblTitolo:    isEn ? 'Title'                       : 'Titolo',
+    lblTesto:     isEn ? 'Message text'                : 'Testo del messaggio',
+    lblCodice:    isEn ? 'Discount code (optional)'    : 'Codice sconto (opzionale)',
+    pTitle:       isEn ? 'E.g. Spring offer — 20% off' : 'Es. Offerta Primavera — 20% sconto',
+    pCodice:      isEn ? 'E.g. SPRING20'               : 'Es. PRIMAVERA20',
+    varHint:      isEn
+      ? '{nome} = client · {attività} = your business · {codice} = discount code'
+      : '{nome} = cliente · {attività} = tua attività · {codice} = codice sconto',
+    canaliLabel:  isEn ? 'Channels'                    : 'Canali',
+    salva:        isEn ? 'Save to library'             : 'Salva nella libreria',
+    aggiorna:     isEn ? 'Update'                      : 'Aggiorna',
+    annulla:      isEn ? 'Cancel'                      : 'Annulla',
+    invia:        isEn ? 'Send'                        : 'Invia',
+    modifica:     isEn ? 'Edit'                        : 'Modifica',
+    elimina:      isEn ? 'Delete'                      : 'Elimina',
+    dest:         isEn ? 'clients'                     : 'clienti',
+    tuttiLbl:     isEn ? 'All clients'                 : 'Tutti i clienti',
     vipLbl:       'VIP',
-    vipSub:       isEn ? 'Marked as VIP'                            : 'Contrassegnati come VIP',
-    personaleLbl: isEn ? 'Specific clients'                          : 'Clienti specifici',
-    personaleSub: isEn ? 'Choose one or more clients'               : 'Scegli uno o più clienti',
-    selectPlh:    isEn ? 'Select clients…'                           : 'Seleziona clienti…',
-    sendVia:      isEn ? 'Send via'                                  : 'Invia tramite',
-    waSub:        isEn ? 'Opens pre-filled message'                  : 'Apre il messaggio pre-compilato',
-    emailSub:     isEn ? 'Opens your email client'                   : 'Apre il client email',
-    infoWa:       isEn ? 'WhatsApp opens a pre-filled window for the first client. You confirm sending with one tap.' : 'WhatsApp apre una finestra con il messaggio pre-compilato per il primo cliente. Confermi con un tap.',
-    send:         isEn ? 'Send promotion'                            : 'Invia promozione',
-    sending:      isEn ? 'Sending...'                                : 'Invio...',
-    sentOk:       isEn ? '✅ Sent!'                                  : '✅ Inviata!',
-    next:         isEn ? 'Next'                                      : 'Avanti',
-    back:         isEn ? 'Back'                                      : 'Indietro',
-    history:      isEn ? 'SENT PROMOTIONS'                           : 'PROMOZIONI INVIATE',
-    noHistory:    isEn ? 'No promotions sent yet.'                   : 'Nessuna promozione inviata ancora.',
-    dest:         isEn ? 'clients'                                   : 'clienti',
-    chars:        isEn ? 'characters'                                : 'caratteri',
-    stepLabels:   isEn ? ['Text', 'Template', 'Send']                : ['Testo', 'Template', 'Invia'],
-    sent:         isEn ? 'Sent'                                      : 'Inviata',
-    noDest:       isEn ? 'No clients with contact details found.'    : 'Nessun cliente con dati di contatto trovato.',
-    noVip:        isEn ? 'No VIP clients yet. Mark clients as VIP from the contacts list.' : 'Nessun cliente VIP. Contrassegna i clienti come VIP dalla rubrica.',
+    selezionaLbl: isEn ? 'Select a client…'            : 'Seleziona un cliente…',
+    inviaTramite: isEn ? 'Send via'                    : 'Invia tramite',
+    apriWa:       isEn ? 'Open WhatsApp'               : 'Apri WhatsApp',
+    apriEmail:    isEn ? 'Open Email'                  : 'Apri Email',
+    noVip:        isEn ? 'No VIP clients yet.'         : 'Nessun cliente VIP.',
+    noDest:       isEn ? 'No clients with contacts.'   : 'Nessun cliente con contatti.',
+    sent:         isEn ? 'Sent'                        : 'Inviata',
+    infoWa:       isEn
+      ? 'WhatsApp opens a pre-filled message for the first client. Confirm sending with one tap.'
+      : 'WhatsApp apre il messaggio pre-compilato per il primo cliente. Confermi con un tap.',
+    confirmDel:   isEn ? 'Delete this promotion?'      : 'Eliminare questa promozione?',
+    confirmDelSub:isEn ? 'This action cannot be undone.' : 'Questa azione non può essere annullata.',
+    yes:          isEn ? 'Delete'                      : 'Elimina',
+    no:           isEn ? 'Cancel'                      : 'Annulla',
+    iconeScegli:  isEn ? 'Choose an icon'              : 'Scegli un\'icona',
+    iconeLabel:   isEn ? 'Icon (optional)'             : 'Icona (facoltativa)',
   };
 
-  const segmenti = [
-    { id: 'tutti',     label: L.tuttiLbl,     sub: L.tuttiSub,     icon: <Users      size={20} color={destinatari === 'tutti'     ? 'white' : '#5D5C9E'} />, n: clienti?.length || 0 },
-    { id: 'inattivi',  label: L.inativiLbl,   sub: L.inativiSub,   icon: <Moon       size={20} color={destinatari === 'inattivi'  ? 'white' : '#94A3B8'} />, n: nInattivi },
-    { id: 'vip',       label: L.vipLbl,       sub: L.vipSub,       icon: <Star       size={20} color={destinatari === 'vip'       ? 'white' : '#F59E0B'} />, n: nVip },
-    { id: 'personale', label: L.personaleLbl, sub: L.personaleSub, icon: <UserCheck  size={20} color={destinatari === 'personale' ? 'white' : '#6366F1'} />, n: clientiSelezionati.length },
+  const tabLabels = [
+    <><BookOpen size={14} />{L.tabLib}</>,
+    <><Plus size={14} />{editId ? L.modifica : L.tabCrea}</>,
+    <><Clock size={14} />{L.tabSto}</>,
   ];
 
-  const canaliBtns = [
-    { id: 'whatsapp', label: 'WhatsApp', sub: L.waSub,    icon: <MessageCircle size={26} color={canali.whatsapp ? '#25D366' : '#94A3B8'} />, activeColor: '#25D366', activeBg: '#F0FDF4' },
-    { id: 'email',    label: 'Email',    sub: L.emailSub, icon: <Mail          size={26} color={canali.email    ? '#5D5C9E' : '#94A3B8'} />, activeColor: '#5D5C9E', activeBg: '#EEEEF8' },
-  ];
-
+  // ── RENDER ─────────────────────────────────────────────────────────────
   return (
     <div style={{ fontFamily: "'Baloo 2', sans-serif" }}>
       <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes slideUp  { from { transform:translateY(100%); }           to { transform:translateY(0); } }
       `}</style>
-
 
       {/* ── HEADER ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
@@ -277,237 +380,320 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#1E293B', lineHeight: 1.2 }}>{L.title}</div>
           <div style={{ fontSize: '12px', color: '#94A3B8', fontWeight: '500' }}>{L.sub}</div>
         </div>
+        {tab !== 1 && (
+          <button onClick={() => { resetForm(); setTab(1); }}
+            style={{ ...btnViolaSt, marginLeft: 'auto', padding: '8px 14px', fontSize: '13px', borderRadius: '10px' }}>
+            <Plus size={15} color="white" />
+            {L.btnNew}
+          </button>
+        )}
       </div>
 
-      {/* ── WIZARD CARD ── */}
-      <div style={cardStyle}>
+      {/* ── TAB BAR ── */}
+      <TabBar active={tab} onChange={(i) => { if (i !== 1) resetForm(); setTab(i); }} labels={tabLabels} />
 
-        {/* Step indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '20px' }}>
-          {L.stepLabels.map((label, i) => {
-            const n = i + 1;
-            const done = step > n;
-            const active = step === n;
-            return (
-              <React.Fragment key={n}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                  <div style={{
-                    width: '24px', height: '24px', borderRadius: '50%',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '11px', fontWeight: '800',
-                    background: done ? '#22C55E' : active ? '#5D5C9E' : '#F1F5F9',
-                    color: done || active ? 'white' : '#94A3B8',
-                    transition: 'all 0.2s',
-                  }}>
-                    {done ? <Check size={12} /> : n}
-                  </div>
-                  <span style={{ fontSize: '12px', fontWeight: '700', color: active ? '#5D5C9E' : done ? '#22C55E' : '#94A3B8' }}>
-                    {label}
-                  </span>
-                </div>
-                {i < 2 && (
-                  <div style={{ flex: 1, height: '2px', background: done ? '#22C55E' : '#F1F5F9', borderRadius: '2px', margin: '0 4px', transition: 'background 0.3s' }} />
-                )}
-              </React.Fragment>
-            );
-          })}
-        </div>
-
-        {/* ── STEP 1 ── */}
-        {step === 1 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div>
-              <div style={stepTitleStyle}>{L.step1}</div>
-              <div style={stepSubStyle}>{L.step1sub}</div>
-            </div>
-
-            <div>
-              <label style={labelStyle}>{L.lblTitolo}</label>
-              <input
-                value={titolo}
-                onChange={e => setTitolo(e.target.value)}
-                placeholder={L.pTitle}
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label style={labelStyle}>{L.lblTesto}</label>
-              <textarea
-                value={testo}
-                onChange={e => setTesto(e.target.value)}
-                rows={7}
-                style={{ ...inputStyle, resize: 'vertical', lineHeight: '1.6' }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '6px', gap: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', flex: 1 }}>
-                  <Info size={13} color="#94A3B8" style={{ flexShrink: 0, marginTop: '1px' }} />
-                  <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: '500', lineHeight: 1.4 }}>{L.varHint}</span>
-                </div>
-                <span style={{ fontSize: '11px', color: '#94A3B8', flexShrink: 0 }}>{testo.length} {L.chars}</span>
+      {/* ════════════════════ TAB 0 — LIBRERIA ════════════════════ */}
+      {tab === 0 && (
+        <div style={{ animation: 'fadeInUp 0.2s ease' }}>
+          {loadingLib ? (
+            <div style={{ textAlign: 'center', color: '#94A3B8', fontSize: '13px', padding: '32px' }}>{t('loading')}</div>
+          ) : libreria.length === 0 ? (
+            <div style={{ ...card, textAlign: 'center', padding: '40px 20px' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: '#EEEDF7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                <Megaphone size={28} color="#5D5C9E" />
               </div>
+              <div style={{ fontSize: '15px', fontWeight: '800', color: '#1E293B', marginBottom: '4px' }}>{L.emptyLib}</div>
+              <div style={{ fontSize: '13px', color: '#94A3B8' }}>{L.emptyLibSub}</div>
+              <button onClick={() => { resetForm(); setTab(1); }}
+                style={{ ...btnViolaSt, margin: '16px auto 0', justifyContent: 'center' }}>
+                <Plus size={15} />{L.btnNew}
+              </button>
             </div>
-
-            {testo.length > 0 && (
-              <div style={{ background: '#F8FAFC', borderRadius: '14px', padding: '14px', border: '1px solid #F1F5F9' }}>
-                <div style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>{L.preview}</div>
-                <div style={{ background: 'white', borderRadius: '10px 10px 10px 0', padding: '10px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'inline-block', maxWidth: '100%' }}>
-                  <div style={{ fontSize: '13px', color: '#1E293B', lineHeight: '1.6', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{testoAnteprima}</div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── STEP 2 ── */}
-        {step === 2 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div>
-              <div style={stepTitleStyle}>{L.step2}</div>
-              <div style={stepSubStyle}>{L.step2sub}</div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-              {TEMPLATES.map(tp => (
-                <div
-                  key={tp.id}
-                  onClick={() => setTemplateId(tp.id)}
-                  style={{
-                    borderRadius: '14px', overflow: 'hidden',
-                    border: `2px solid ${templateId === tp.id ? tp.dot : '#F1F5F9'}`,
-                    cursor: 'pointer',
-                    boxShadow: templateId === tp.id ? `0 0 0 3px ${tp.dot}22` : 'none',
-                    transition: 'all 0.2s', position: 'relative',
-                  }}
-                >
-                  {templateId === tp.id && (
-                    <div style={{ position: 'absolute', top: '6px', right: '6px', width: '20px', height: '20px', borderRadius: '50%', background: tp.dot, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
-                      <Check size={11} color="white" />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {libreria.map(p => {
+                let canaliP = {};
+                try { canaliP = JSON.parse(p.canali); } catch {}
+                const dataStr = p.created_at
+                  ? new Date(p.created_at).toLocaleDateString(isEn ? 'en-GB' : 'it-IT', { day: 'numeric', month: 'short' })
+                  : '';
+                return (
+                  <div key={p.id} style={{ ...card, display: 'flex', alignItems: 'flex-start', gap: '12px', animation: 'fadeInUp 0.2s ease' }}>
+                    {/* Icona promo */}
+                    <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: '#EEEDF7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>
+                      {p.icona || '🎁'}
                     </div>
-                  )}
-                  <div style={{ height: '60px', background: tp.bg }} />
-                  <div style={{ padding: '6px 8px', textAlign: 'center', fontSize: '11px', fontWeight: '700', color: '#1E293B', background: 'white' }}>
-                    {tp.label[lang] || tp.label.it}
+
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '14px', fontWeight: '800', color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '3px' }}>
+                        {p.titolo}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '6px' }}>
+                        {p.testo?.slice(0, 60)}{(p.testo?.length || 0) > 60 ? '…' : ''}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        {canaliP.whatsapp && (
+                          <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 8px', borderRadius: '20px', background: '#F0FDF4', color: '#16A34A' }}>WhatsApp</span>
+                        )}
+                        {canaliP.email && (
+                          <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 8px', borderRadius: '20px', background: '#EEF2FF', color: '#5D5C9E' }}>Email</span>
+                        )}
+                        {p.codice_sconto && (
+                          <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 8px', borderRadius: '20px', background: '#FFFBEB', color: '#92400E', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                            <Tag size={9} />{p.codice_sconto}
+                          </span>
+                        )}
+                        <span style={{ fontSize: '10px', color: '#CBD5E1', marginLeft: 'auto' }}>{dataStr}</span>
+                      </div>
+                    </div>
+
+                    {/* Azioni */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
+                      {/* Invia */}
+                      <button onClick={() => apriSheet(p)} title={L.invia}
+                        style={{ width: '34px', height: '34px', borderRadius: '10px', border: 'none', background: '#5D5C9E', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                        <Send size={14} color="white" />
+                      </button>
+                      {/* Modifica */}
+                      <button onClick={() => apriModifica(p)} title={L.modifica}
+                        style={{ width: '34px', height: '34px', borderRadius: '10px', border: '1.5px solid #E2E8F0', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                        <Pencil size={14} color="#5D5C9E" />
+                      </button>
+                      {/* Elimina */}
+                      <button onClick={() => setDeleteId(p.id)} title={L.elimina}
+                        style={{ width: '34px', height: '34px', borderRadius: '10px', border: '1.5px solid #FEE2E2', background: '#FFF5F5', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                        <Trash2 size={14} color="#EF4444" />
+                      </button>
+                    </div>
                   </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ════════════════════ TAB 1 — CREA / MODIFICA ════════════════════ */}
+      {tab === 1 && (
+        <div style={{ animation: 'fadeInUp 0.2s ease' }}>
+          <div style={card}>
+
+            {/* Icona facoltativa */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelSt}>{L.iconeLabel}</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button onClick={() => setMostraIcone(v => !v)}
+                  style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#EEEDF7', border: `2px solid ${mostraIcone ? '#5D5C9E' : '#E2E8F0'}`, fontSize: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  {iconaPromo}
+                </button>
+                <span style={{ fontSize: '12px', color: '#94A3B8' }}>{L.iconeScegli}</span>
+              </div>
+              {mostraIcone && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px', padding: '12px', background: '#F8FAFC', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+                  {ICONE_PROMO.map(ic => (
+                    <button key={ic} onClick={() => { setIconaPromo(ic); setMostraIcone(false); }}
+                      style={{ width: '38px', height: '38px', borderRadius: '10px', border: `2px solid ${ic === iconaPromo ? '#5D5C9E' : 'transparent'}`, background: ic === iconaPromo ? '#EEEDF7' : 'white', fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {ic}
+                    </button>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
 
-            {/* Preview card */}
-            <div style={{ borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }}>
-              <div style={{ background: tpl.bg, padding: '18px 16px' }}>
-                {fotoUrl && (
-                  <img src={fotoUrl} alt="" style={{ width: '100%', height: '90px', objectFit: 'cover', borderRadius: '10px', marginBottom: '10px' }} />
-                )}
-                <div style={{ fontSize: '15px', fontWeight: '800', color: tpl.accent, lineHeight: 1.2, marginBottom: '6px' }}>
-                  {titolo || (isEn ? 'Your promotion title' : 'Il titolo della tua promozione')}
-                </div>
-                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>
-                  {testoAnteprima.slice(0, 80)}{testoAnteprima.length > 80 ? '…' : ''}
-                </div>
-                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '8px', fontWeight: '600' }}>powered by KIPRI</div>
+            {/* Titolo */}
+            <div style={{ marginBottom: '14px' }}>
+              <label style={labelSt}>{L.lblTitolo}</label>
+              <input value={titolo} onChange={e => setTitolo(e.target.value)}
+                placeholder={L.pTitle} style={inputSt} />
+            </div>
+
+            {/* Testo */}
+            <div style={{ marginBottom: '14px' }}>
+              <label style={labelSt}>{L.lblTesto}</label>
+              <textarea value={testo} onChange={e => setTesto(e.target.value)}
+                rows={6} style={{ ...inputSt, resize: 'vertical', lineHeight: '1.6' }} />
+              <div style={{ background: '#EEEDF7', borderRadius: '10px', padding: '8px 12px', marginTop: '6px', display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                <Info size={13} color="#5D5C9E" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span style={{ fontSize: '11px', color: '#5D5C9E', fontWeight: '600', lineHeight: 1.5 }}>{L.varHint}</span>
               </div>
             </div>
 
-            <label style={uploadStyle}>
-              <input type="file" accept="image/*" onChange={handleFoto} style={{ display: 'none' }} />
-              <Image size={18} color={fotoUrl ? '#22C55E' : '#94A3B8'} />
-              <span style={{ fontSize: '13px', color: fotoUrl ? '#22C55E' : '#94A3B8', fontWeight: '600' }}>
-                {fotoUrl ? L.photoAdded : L.addPhoto}
-              </span>
-            </label>
-          </div>
-        )}
-
-        {/* ── STEP 3 ── */}
-        {step === 3 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div>
-              <div style={stepTitleStyle}>{L.step3}</div>
-              <div style={stepSubStyle}>{L.step3sub}</div>
+            {/* Codice sconto */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelSt}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Tag size={13} color="#F59E0B" />{L.lblCodice}
+                </span>
+              </label>
+              <input value={codiceSconto} onChange={e => setCodiceSconto(e.target.value.toUpperCase())}
+                placeholder={L.pCodice}
+                style={{ ...inputSt, fontWeight: '700', letterSpacing: '0.05em', textTransform: 'uppercase' }} />
+              {codiceSconto && (
+                <div style={{ fontSize: '11px', color: '#92400E', background: '#FFFBEB', borderRadius: '8px', padding: '6px 10px', marginTop: '6px', fontWeight: '600' }}>
+                  {isEn ? 'In the message, use {codice} where you want to insert this code.' : 'Nel messaggio usa {codice} dove vuoi inserire questo codice.'}
+                </div>
+              )}
             </div>
 
-            {/* Segmenti */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {segmenti.map(seg => {
+            {/* Canali */}
+            <div style={{ marginBottom: '18px' }}>
+              <label style={labelSt}>{L.canaliLabel}</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                {[
+                  { id: 'whatsapp', label: 'WhatsApp', icon: <MessageCircle size={22} color={canali.whatsapp ? '#25D366' : '#94A3B8'} />, activeBg: '#F0FDF4', activeColor: '#25D366' },
+                  { id: 'email',    label: 'Email',    icon: <Mail          size={22} color={canali.email    ? '#5D5C9E' : '#94A3B8'} />, activeBg: '#EEEDF7', activeColor: '#5D5C9E' },
+                ].map(ch => {
+                  const active = canali[ch.id];
+                  return (
+                    <div key={ch.id} onClick={() => setCanali(p => ({ ...p, [ch.id]: !p[ch.id] }))}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '12px 8px', borderRadius: '14px', border: `2px solid ${active ? ch.activeColor : '#F1F5F9'}`, background: active ? ch.activeBg : 'white', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'center' }}>
+                      {ch.icon}
+                      <span style={{ fontSize: '12px', fontWeight: '700', color: '#1E293B' }}>{ch.label}</span>
+                      {active && <Check size={13} color={ch.activeColor} />}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Bottoni footer form */}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => { resetForm(); setTab(0); }} style={{ ...btnSecSt, flex: 1, justifyContent: 'center' }}>
+                {L.annulla}
+              </button>
+              <button onClick={salvaInLibreria}
+                disabled={!titolo.trim() || !testo.trim()}
+                style={{ ...btnViolaSt, flex: 2, justifyContent: 'center', opacity: (!titolo.trim() || !testo.trim()) ? 0.4 : 1 }}>
+                <Check size={15} color="white" />
+                {editId ? L.aggiorna : L.salva}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════════ TAB 2 — STORICO ════════════════════ */}
+      {tab === 2 && (
+        <div style={{ animation: 'fadeInUp 0.2s ease' }}>
+          {loadingSto ? (
+            <div style={{ textAlign: 'center', color: '#94A3B8', fontSize: '13px', padding: '32px' }}>{t('loading')}</div>
+          ) : storico.length === 0 ? (
+            <div style={{ ...card, textAlign: 'center', padding: '40px 20px' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: '#EEEDF7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                <Clock size={28} color="#5D5C9E" />
+              </div>
+              <div style={{ fontSize: '15px', fontWeight: '800', color: '#1E293B', marginBottom: '4px' }}>{L.emptyHist}</div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {storico.map(p => {
+                let canaliP = {};
+                try { canaliP = JSON.parse(p.canali); } catch {}
+                const dataStr = p.created_at
+                  ? new Date(p.created_at).toLocaleDateString(isEn ? 'en-GB' : 'it-IT', { day: 'numeric', month: 'short' })
+                  : '';
+                return (
+                  <div key={p.id} style={{ ...card, display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#EEEDF7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
+                      {p.icona || '🎁'}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '14px', fontWeight: '800', color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.titolo}</div>
+                      <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        <span>{dataStr}</span>
+                        {canaliP.whatsapp && <span style={{ color: '#16A34A' }}>WhatsApp</span>}
+                        {canaliP.email    && <span style={{ color: '#5D5C9E' }}>Email</span>}
+                        <span>· {p.n_destinatari || 0} {L.dest}</span>
+                      </div>
+                    </div>
+                    <div style={{ background: '#F0FDF4', color: '#16A34A', fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '20px', flexShrink: 0 }}>
+                      {L.sent}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ════════════════════ BOTTOM SHEET — INVIA ════════════════════ */}
+      {sheetPromo && (
+        <div
+          onClick={(e) => { if (e.target === e.currentTarget) { setSheetPromo(null); setUrlPronto(''); } }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 100, display: 'flex', alignItems: 'flex-end' }}>
+          <div style={{ background: 'white', borderRadius: '22px 22px 0 0', width: '100%', maxWidth: '600px', margin: '0 auto', padding: '20px 18px', paddingBottom: 'max(24px, env(safe-area-inset-bottom, 24px))', animation: 'slideUp 0.25s ease', maxHeight: '85vh', overflowY: 'auto' }}>
+            {/* Handle */}
+            <div style={{ width: '36px', height: '4px', background: '#E2E8F0', borderRadius: '2px', margin: '0 auto 16px' }} />
+
+            {/* Titolo promo */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#EEEDF7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
+                {sheetPromo.icona || '🎁'}
+              </div>
+              <div>
+                <div style={{ fontSize: '15px', fontWeight: '800', color: '#1E293B' }}>{sheetPromo.titolo}</div>
+                <div style={{ fontSize: '12px', color: '#94A3B8' }}>{isEn ? 'Send to…' : 'Invia a…'}</div>
+              </div>
+              <button onClick={() => { setSheetPromo(null); setUrlPronto(''); }}
+                style={{ marginLeft: 'auto', width: '32px', height: '32px', borderRadius: '10px', border: '1.5px solid #E2E8F0', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <X size={16} color="#94A3B8" />
+              </button>
+            </div>
+
+            {/* Destinatari */}
+            <label style={labelSt}>{isEn ? 'Recipients' : 'Destinatari'}</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+              {[
+                { id: 'tutti', label: L.tuttiLbl, icon: <Users size={17} color={destinatari === 'tutti' ? 'white' : '#5D5C9E'} />, n: clienti?.length || 0 },
+                { id: 'vip',   label: L.vipLbl,   icon: <Star  size={17} color={destinatari === 'vip'   ? 'white' : '#F59E0B'} fill={destinatari === 'vip' ? 'white' : 'none'} />, n: nVip },
+                { id: 'seleziona', label: L.selezionaLbl, icon: <UserCheck size={17} color={destinatari === 'seleziona' ? 'white' : '#6366F1'} />, n: clientiSelezionati.length },
+              ].map(seg => {
                 const active = destinatari === seg.id;
                 return (
                   <div key={seg.id}>
-                    <div
-                      onClick={() => { setDestinatari(seg.id); if (seg.id !== 'personale') setDropdownOpen(false); }}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '12px',
-                        padding: '12px 14px', borderRadius: active && seg.id === 'personale' && dropdownOpen ? '14px 14px 0 0' : '14px',
-                        border: `1.5px solid ${active ? (seg.id === 'personale' ? '#6366F1' : '#5D5C9E') : '#F1F5F9'}`,
-                        background: active ? (seg.id === 'personale' ? '#EEEEFD' : '#EEEEF8') : 'white',
-                        cursor: 'pointer', transition: 'all 0.15s',
-                      }}
-                    >
-                      <div style={{
-                        width: '36px', height: '36px', borderRadius: '10px',
-                        background: active ? (seg.id === 'personale' ? '#6366F1' : '#5D5C9E') : '#F8FAFC',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        flexShrink: 0, transition: 'all 0.15s',
-                      }}>
+                    <div onClick={() => { setDestinatari(seg.id); if (seg.id !== 'seleziona') setDropdownClienti(false); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 14px', borderRadius: '14px', border: `1.5px solid ${active ? '#5D5C9E' : '#F1F5F9'}`, background: active ? '#EEEDF7' : 'white', cursor: 'pointer', transition: 'all 0.15s' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '9px', background: active ? '#5D5C9E' : '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         {seg.icon}
                       </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '14px', fontWeight: '700', color: '#1E293B' }}>{seg.label}</div>
-                        <div style={{ fontSize: '11px', color: '#94A3B8' }}>{seg.sub}</div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                        <div style={{ fontSize: '13px', fontWeight: '800', color: seg.id === 'personale' ? '#6366F1' : '#5D5C9E', background: seg.id === 'personale' ? '#EEEEFD' : '#EEEEF8', padding: '3px 10px', borderRadius: '20px' }}>
-                          {seg.n} {L.dest}
-                        </div>
-                        {seg.id === 'personale' && (
-                          <ChevronDown size={16} color="#94A3B8" style={{ transform: active && dropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
-                            onClick={(e) => { e.stopPropagation(); if (active) setDropdownOpen(d => !d); }}
-                          />
-                        )}
-                      </div>
+                      <span style={{ flex: 1, fontSize: '14px', fontWeight: '700', color: '#1E293B' }}>{seg.label}</span>
+                      <span style={{ fontSize: '12px', fontWeight: '700', color: active ? '#5D5C9E' : '#94A3B8', background: active ? 'rgba(93,92,158,0.1)' : '#F1F5F9', padding: '2px 9px', borderRadius: '20px' }}>
+                        {seg.n} {L.dest}
+                      </span>
+                      {seg.id === 'seleziona' && (
+                        <ChevronDown size={15} color="#94A3B8" style={{ transform: (active && dropdownClienti) ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
+                          onClick={(e) => { e.stopPropagation(); if (active) setDropdownClienti(v => !v); }} />
+                      )}
                     </div>
 
-                    {/* Dropdown selezione clienti */}
-                    {seg.id === 'personale' && active && (
-                      <div ref={dropdownRef} style={{
-                        border: '1.5px solid #6366F1', borderTop: 'none',
-                        borderRadius: '0 0 14px 14px', background: 'white',
-                        maxHeight: '200px', overflowY: 'auto',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                      }}>
-                        {/* Selezione rapida */}
+                    {/* Dropdown selezione singolo cliente */}
+                    {seg.id === 'seleziona' && active && (
+                      <div ref={dropRef} style={{ border: '1.5px solid #5D5C9E', borderTop: 'none', borderRadius: '0 0 14px 14px', background: 'white', maxHeight: '180px', overflowY: 'auto' }}>
                         <div style={{ padding: '8px 12px', borderBottom: '1px solid #F1F5F9', display: 'flex', gap: '8px' }}>
-                          <button onClick={() => setClientiSelezionati(clienti.map(c => c.id))}
-                            style={{ fontSize: '11px', fontWeight: '700', color: '#6366F1', background: '#EEEEFD', border: 'none', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer' }}>
+                          <button onClick={() => setClientiSelezionati(clienti?.map(c => c.id) || [])}
+                            style={{ fontSize: '11px', fontWeight: '700', color: '#5D5C9E', background: '#EEEDF7', border: 'none', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer', fontFamily: "'Baloo 2',sans-serif" }}>
                             {isEn ? 'All' : 'Tutti'}
                           </button>
                           <button onClick={() => setClientiSelezionati([])}
-                            style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', background: '#F1F5F9', border: 'none', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer' }}>
+                            style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', background: '#F1F5F9', border: 'none', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer', fontFamily: "'Baloo 2',sans-serif" }}>
                             {isEn ? 'None' : 'Nessuno'}
                           </button>
                         </div>
-                        {clienti?.length === 0 ? (
-                          <div style={{ padding: '16px', textAlign: 'center', color: '#94A3B8', fontSize: '13px' }}>
-                            {isEn ? 'No clients yet.' : 'Nessun cliente.'}
-                          </div>
-                        ) : clienti?.map(c => {
+                        {(clienti || []).map(c => {
                           const sel = clientiSelezionati.includes(c.id);
                           return (
-                            <div key={c.id} onClick={() => toggleClienteSelezionato(c.id)}
-                              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', cursor: 'pointer', background: sel ? '#EEEEFD' : 'white', borderBottom: '1px solid #F8FAFC', transition: 'background 0.1s' }}>
-                              <div style={{ width: '20px', height: '20px', borderRadius: '6px', border: `2px solid ${sel ? '#6366F1' : '#E2E8F0'}`, background: sel ? '#6366F1' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
-                                {sel && <Check size={12} color="white" />}
+                            <div key={c.id} onClick={() => setClientiSelezionati(prev => sel ? prev.filter(x => x !== c.id) : [...prev, c.id])}
+                              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', cursor: 'pointer', background: sel ? '#EEEDF7' : 'white', borderBottom: '1px solid #F8FAFC', transition: 'background 0.1s' }}>
+                              <div style={{ width: '20px', height: '20px', borderRadius: '6px', border: `2px solid ${sel ? '#5D5C9E' : '#E2E8F0'}`, background: sel ? '#5D5C9E' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
+                                {sel && <Check size={11} color="white" />}
                               </div>
                               <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: '14px', fontWeight: '700', color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  {c.nome}
-                                  {c.vip && <Star size={11} color="#F59E0B" fill="#F59E0B" style={{ marginLeft: '5px', verticalAlign: 'middle' }} />}
+                                <div style={{ fontSize: '13px', fontWeight: '700', color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {c.nome}{c.vip && <Star size={10} color="#F59E0B" fill="#F59E0B" style={{ marginLeft: '4px', verticalAlign: 'middle' }} />}
                                 </div>
-                                {(c.tel || c.email) && (
-                                  <div style={{ fontSize: '11px', color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {c.tel || c.email}
-                                  </div>
-                                )}
+                                {(c.tel || c.email) && <div style={{ fontSize: '11px', color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.tel || c.email}</div>}
                               </div>
                             </div>
                           );
@@ -515,224 +701,76 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
                       </div>
                     )}
 
-                    {/* Avviso nessun VIP */}
                     {seg.id === 'vip' && active && nVip === 0 && (
-                      <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '10px', padding: '10px 12px', marginTop: '6px', fontSize: '12px', color: '#92400E', fontWeight: '600' }}>
-                        ⭐ {L.noVip}
-                      </div>
+                      <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '10px', padding: '8px 12px', marginTop: '6px', fontSize: '12px', color: '#92400E', fontWeight: '600' }}>⭐ {L.noVip}</div>
                     )}
                   </div>
                 );
               })}
-
-              {/* Chip clienti selezionati */}
-              {destinatari === 'personale' && clientiSelezionati.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '4px 0' }}>
-                  {clienti?.filter(c => clientiSelezionati.includes(c.id)).map(c => (
-                    <span key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#EEEEFD', color: '#6366F1', fontSize: '12px', fontWeight: '700', borderRadius: '20px', padding: '4px 10px' }}>
-                      {c.nome}
-                      <X size={12} style={{ cursor: 'pointer' }} onClick={() => toggleClienteSelezionato(c.id)} />
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Canali */}
-            <div>
-              <label style={{ ...labelStyle, display: 'block', marginBottom: '8px' }}>{L.sendVia}</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                {canaliBtns.map(ch => {
-                  const active = canali[ch.id];
-                  return (
-                    <div
-                      key={ch.id}
-                      onClick={() => setCanali(prev => ({ ...prev, [ch.id]: !prev[ch.id] }))}
-                      style={{
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
-                        padding: '14px 10px', borderRadius: '14px',
-                        border: `2px solid ${active ? ch.activeColor : '#F1F5F9'}`,
-                        background: active ? ch.activeBg : 'white',
-                        cursor: 'pointer', transition: 'all 0.2s', textAlign: 'center',
-                      }}
-                    >
-                      {ch.icon}
-                      <span style={{ fontSize: '13px', fontWeight: '700', color: '#1E293B' }}>{ch.label}</span>
-                      <span style={{ fontSize: '11px', color: '#94A3B8', lineHeight: 1.3 }}>{ch.sub}</span>
-                      {active && (
-                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: ch.activeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '2px' }}>
-                          <Check size={11} color="white" />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
             </div>
 
             {/* Info box */}
-            <div style={{ background: '#EEEEF8', borderRadius: '12px', padding: '12px 14px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-              <Info size={16} color="#5D5C9E" style={{ flexShrink: 0, marginTop: '1px' }} />
+            <div style={{ background: '#EEEDF7', borderRadius: '12px', padding: '10px 13px', display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '16px' }}>
+              <Info size={14} color="#5D5C9E" style={{ flexShrink: 0, marginTop: '2px' }} />
               <span style={{ fontSize: '12px', color: '#5D5C9E', fontWeight: '600', lineHeight: 1.5 }}>{L.infoWa}</span>
             </div>
 
-            {nDest === 0 && destinatari !== 'personale' && (
-              <div style={{ background: '#FEF2F2', borderRadius: '12px', padding: '12px 14px', fontSize: '13px', color: '#EF4444', fontWeight: '600' }}>
-                ⚠️ {L.noDest}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── FOOTER ── */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #F1F5F9' }}>
-          <button
-            onClick={() => setStep(s => s - 1)}
-            style={{ ...backBtnStyle, visibility: step > 1 ? 'visible' : 'hidden' }}
-          >
-            {L.back}
-          </button>
-
-          {step < 3 ? (
-            <button
-              onClick={() => setStep(s => s + 1)}
-              disabled={!canProceed()}
-              style={{ ...nextBtnStyle, opacity: canProceed() ? 1 : 0.4, display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              {L.next} <ChevronRight size={16} color="white" />
-            </button>
-          ) : urlPronto ? (
-            <a
-              href={urlPronto}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => setTimeout(resetWizard, 500)}
-              style={{
-                ...nextBtnStyle,
-                background: canali.whatsapp
-                  ? 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)'
-                  : 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
-                display: 'flex', alignItems: 'center', gap: '8px',
-                textDecoration: 'none', color: 'white',
-              }}
-            >
-              {canali.whatsapp
-                ? <><MessageCircle size={16} color="white" /> Apri WhatsApp</>
-                : <><Mail size={16} color="white" /> Apri Email</>}
-            </a>
-          ) : (
-            <button
-              onClick={handleInvia}
-              disabled={(!canali.whatsapp && !canali.email) || (destinatari === 'personale' && clientiSelezionati.length === 0)}
-              style={{
-                ...nextBtnStyle,
-                background: canali.whatsapp
-                  ? 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)'
-                  : canali.email
-                  ? 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)'
-                  : nextBtnStyle.background,
-                opacity: ((!canali.whatsapp && !canali.email) || (destinatari === 'personale' && clientiSelezionati.length === 0)) ? 0.4 : 1,
-                display: 'flex', alignItems: 'center', gap: '8px',
-              }}
-            >
-              {canali.whatsapp ? <><MessageCircle size={16} color="white" /> Invia con WhatsApp</>
-                : canali.email ? <><Mail size={16} color="white" /> Invia con Email</>
-                : <><Send size={16} color="white" /> {L.send}</>
-              }
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ── STORICO ── */}
-      <div style={{ marginTop: '24px' }}>
-        <div style={{ fontSize: '11px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
-          {L.history}
-        </div>
-
-        {loadingPromo ? (
-          <div style={{ textAlign: 'center', color: '#94A3B8', fontSize: '13px', padding: '24px' }}>{t('loading')}</div>
-        ) : promozioni.length === 0 ? (
-          <div style={{ background: 'white', borderRadius: '20px', padding: '32px 20px', textAlign: 'center', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', border: '1px solid #F1F5F9' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '10px' }}>
-              <Megaphone size={36} color="#E2E8F0" />
-            </div>
-            <div style={{ fontSize: '14px', fontWeight: '700', color: '#1E293B', marginBottom: '4px' }}>{L.noHistory}</div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {promozioni.map(p => {
-              const canaliP = (() => { try { return JSON.parse(p.canali); } catch { return {}; } })();
-              const canaleLabel = [canaliP.whatsapp && 'WhatsApp', canaliP.email && 'Email'].filter(Boolean).join(' · ');
-              const dataStr = p.created_at
-                ? new Date(p.created_at).toLocaleDateString(isEn ? 'en-GB' : 'it-IT', { day: 'numeric', month: 'short' })
-                : '';
-              const tplItem = TEMPLATES.find(tp => tp.id === p.template_id);
+            {/* Bottone invia */}
+            {!urlPronto ? (
+              <button onClick={handleInviaSheet}
+                disabled={destinatari === 'seleziona' && clientiSelezionati.length === 0}
+                style={{ ...btnViolaSt, width: '100%', justifyContent: 'center', fontSize: '15px', padding: '14px', borderRadius: '16px', opacity: (destinatari === 'seleziona' && clientiSelezionati.length === 0) ? 0.4 : 1 }}>
+                <Send size={16} color="white" />
+                {isEn ? 'Prepare message' : 'Prepara messaggio'}
+              </button>
+            ) : (() => {
+              let canaliP = {};
+              try { canaliP = JSON.parse(sheetPromo.canali); } catch {}
+              const isWa = canaliP.whatsapp;
               return (
-                <div key={p.id} style={{ background: 'white', borderRadius: '16px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', border: '1px solid #F1F5F9' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: tplItem?.bg || '#EEEEF8', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Megaphone size={18} color="white" />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '14px', fontWeight: '700', color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.titolo}</div>
-                    <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
-                      {dataStr} · {canaleLabel} · {p.n_destinatari || 0} {L.dest}
-                    </div>
-                  </div>
-                  <div style={{ background: '#EEF8F2', color: '#15803D', fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '20px', flexShrink: 0 }}>
-                    {L.sent}
-                  </div>
-                </div>
+                <a href={urlPronto} target="_blank" rel="noopener noreferrer"
+                  onClick={onOpenLink}
+                  style={{
+                    ...btnViolaSt,
+                    background: isWa
+                      ? 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)'
+                      : 'linear-gradient(135deg, #5D5C9E 0%, #4a4980 100%)',
+                    width: '100%', justifyContent: 'center', fontSize: '15px', padding: '14px',
+                    borderRadius: '16px', textDecoration: 'none', color: 'white',
+                    boxShadow: isWa ? '0 4px 14px rgba(34,197,94,0.3)' : '0 4px 12px rgba(93,92,158,0.25)',
+                  }}>
+                  {isWa
+                    ? <><MessageCircle size={16} color="white" />{L.apriWa}</>
+                    : <><Mail         size={16} color="white" />{L.apriEmail}</>}
+                </a>
               );
-            })}
+            })()}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* ════════════════════ DIALOG CONFERMA ELIMINAZIONE ════════════════════ */}
+      {deleteId && (
+        <div onClick={() => setDeleteId(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ background: 'white', borderRadius: '22px', padding: '24px 20px', maxWidth: '320px', width: '100%', textAlign: 'center', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
+            <div style={{ width: '52px', height: '52px', borderRadius: '16px', background: '#FFF5F5', border: '2px solid #FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+              <Trash2 size={24} color="#EF4444" />
+            </div>
+            <div style={{ fontSize: '16px', fontWeight: '800', color: '#1E293B', marginBottom: '6px' }}>{L.confirmDel}</div>
+            <div style={{ fontSize: '13px', color: '#94A3B8', marginBottom: '20px' }}>{L.confirmDelSub}</div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => setDeleteId(null)}
+                style={{ ...btnSecSt, flex: 1, justifyContent: 'center' }}>{L.no}</button>
+              <button onClick={() => eliminaPromo(deleteId)}
+                style={{ ...btnViolaSt, flex: 1, justifyContent: 'center', background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)', boxShadow: '0 4px 12px rgba(239,68,68,0.25)' }}>
+                <Trash2 size={14} color="white" />{L.yes}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-// ── STYLES ──
-const cardStyle = {
-  background: 'white',
-  borderRadius: '22px',
-  padding: '20px',
-  boxShadow: '0 2px 12px rgba(93,92,158,0.08)',
-  border: '1px solid rgba(93,92,158,0.1)',
-};
-const stepTitleStyle = {
-  fontSize: '17px', fontWeight: '800', color: '#1E293B',
-  fontFamily: "'Baloo 2', sans-serif",
-};
-const stepSubStyle = {
-  fontSize: '12px', color: '#94A3B8', marginTop: '2px', fontWeight: '500',
-};
-const labelStyle = {
-  fontSize: '13px', fontWeight: '700', color: '#1E293B',
-  fontFamily: "'Baloo 2', sans-serif",
-};
-const inputStyle = {
-  width: '100%', padding: '11px 14px',
-  border: '1.5px solid #E2E8F0', borderRadius: '12px',
-  fontFamily: "'Baloo 2', sans-serif", fontSize: '14px',
-  color: '#1E293B', background: '#F8FAFC',
-  outline: 'none', boxSizing: 'border-box',
-};
-const uploadStyle = {
-  display: 'flex', alignItems: 'center', gap: '10px',
-  padding: '14px', border: '1.5px dashed #E2E8F0',
-  borderRadius: '12px', cursor: 'pointer', background: '#F8FAFC',
-};
-const backBtnStyle = {
-  background: 'none', border: '1.5px solid #E2E8F0',
-  borderRadius: '10px', padding: '9px 16px',
-  fontFamily: "'Baloo 2', sans-serif", fontSize: '13px',
-  fontWeight: '700', color: '#94A3B8', cursor: 'pointer',
-};
-const nextBtnStyle = {
-  background: 'linear-gradient(135deg, #5D5C9E 0%, #4a4980 100%)',
-  color: 'white', border: 'none', borderRadius: '12px',
-  padding: '11px 22px', fontFamily: "'Baloo 2', sans-serif",
-  fontSize: '14px', fontWeight: '700', cursor: 'pointer',
-  boxShadow: '0 4px 12px rgba(93,92,158,0.25)',
-};
