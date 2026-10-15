@@ -161,8 +161,6 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
     setCanali({ whatsapp: true, email: false });
   };
 
-  // Calcola e salva l'URL al cambio di destinatari/canali/step
-  // così il bottone <a> è sempre pronto senza bisogno di await
   const calcolaUrl = () => {
     const clientiConCanale = clientiFiltrati.filter(c =>
       (canali.whatsapp && c.tel) || (canali.email && c.email)
@@ -187,22 +185,26 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
     return '';
   };
 
-  // Salva su Supabase fire-and-forget (no await — iOS freeze fix)
-  const salvaPromozione = () => {
+  // Salva con await, poi apre WhatsApp — garantisce che Supabase completi prima di lasciare la pagina
+  const handleInvia = async () => {
+    if (loading) return;
+    setLoading(true);
+    const url = calcolaUrl();
     const clientiConCanale = clientiFiltrati.filter(c =>
       (canali.whatsapp && c.tel) || (canali.email && c.email)
     );
     const nDest = clientiConCanale.length;
-    supabase.from('promozioni').insert([{
-      user_id: user.id,
-      titolo,
-      testo,
-      template_id: templateId,
-      destinatari,
-      n_destinatari: nDest,
-      canali: JSON.stringify(canali),
-      created_at: new Date().toISOString(),
-    }]).then(() => caricaPromozioni()).catch(() => {});
+    try {
+      await supabase.from('promozioni').insert([{
+        user_id: user.id, titolo, testo, template_id: templateId,
+        destinatari, n_destinatari: nDest, canali: JSON.stringify(canali),
+        created_at: new Date().toISOString(),
+      }]);
+      await caricaPromozioni();
+    } catch (_) {}
+    setLoading(false);
+    resetWizard();
+    if (url) window.location.href = url;
   };
 
   const L = {
@@ -263,6 +265,7 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
 
   return (
     <div style={{ fontFamily: "'Baloo 2', sans-serif" }}>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
       {/* ── HEADER ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
@@ -591,42 +594,35 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
 
           {step < 3 ? (
             <button
-              onClick={() => { if (step === 2) salvaPromozione(); setStep(s => s + 1); }}
+              onClick={() => setStep(s => s + 1)}
               disabled={!canProceed()}
               style={{ ...nextBtnStyle, opacity: canProceed() ? 1 : 0.4, display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               {L.next} <ChevronRight size={16} color="white" />
             </button>
-          ) : (() => {
-            const url = calcolaUrl();
-            const disabled = !url || (!canali.whatsapp && !canali.email) || (destinatari === 'personale' && clientiSelezionati.length === 0);
-            const bg = canali.whatsapp
-              ? 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)'
-              : canali.email
-              ? 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)'
-              : nextBtnStyle.background;
-            return disabled ? (
-              <button disabled style={{ ...nextBtnStyle, background: bg, opacity: 0.4, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Send size={16} color="white" />
-                {canali.whatsapp ? 'Invia con WhatsApp' : canali.email ? 'Invia con Email' : L.send}
-              </button>
-            ) : (
-              <a
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => { caricaPromozioni(); setTimeout(resetWizard, 500); }}
-                style={{
-                  ...nextBtnStyle,
-                  background: bg,
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                  textDecoration: 'none', color: 'white',
-                }}
-              >
-                {canali.whatsapp ? <><MessageCircle size={16} color="white" /> Invia con WhatsApp</> : <><Mail size={16} color="white" /> Invia con Email</>}
-              </a>
-            );
-          })()}
+          ) : (
+            <button
+              onClick={handleInvia}
+              disabled={loading || (!canali.whatsapp && !canali.email) || (destinatari === 'personale' && clientiSelezionati.length === 0)}
+              style={{
+                ...nextBtnStyle,
+                background: canali.whatsapp
+                  ? 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)'
+                  : canali.email
+                  ? 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)'
+                  : nextBtnStyle.background,
+                opacity: (loading || (!canali.whatsapp && !canali.email) || (destinatari === 'personale' && clientiSelezionati.length === 0)) ? 0.4 : 1,
+                display: 'flex', alignItems: 'center', gap: '8px',
+              }}
+            >
+              {loading
+                ? <><span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} /> Salvataggio...</>
+                : canali.whatsapp ? <><MessageCircle size={16} color="white" /> Invia con WhatsApp</>
+                : canali.email ? <><Mail size={16} color="white" /> Invia con Email</>
+                : <><Send size={16} color="white" /> {L.send}</>
+              }
+            </button>
+          )}
         </div>
       </div>
 
