@@ -209,8 +209,8 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
           .replace(/\{nome\}/g, primo.nome || '')
           .replace(/\{attività\}/g, config?.nome_azienda || '');
         window.location.href = `mailto:${primo.email}?subject=${encodeURIComponent(titolo)}&body=${encodeURIComponent(msg)}`;
-      setSent(false);
-    });
+      }
+    }
   };
 
   const L = {
