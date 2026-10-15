@@ -67,7 +67,7 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
 
   const tpl = TEMPLATES.find(tp => tp.id === templateId);
 
-  useEffect(() => {
+  const caricaPromozioni = () => {
     if (!supabase || !user) return;
     supabase
       .from('promozioni')
@@ -77,6 +77,17 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
       .limit(10)
       .then(({ data }) => { setPromozioni(data || []); setLoadingPromo(false); })
       .catch(() => setLoadingPromo(false));
+  };
+
+  useEffect(() => {
+    caricaPromozioni();
+  }, [user]);
+
+  // Ricarica storico quando l'utente torna sull'app (dopo WhatsApp)
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') caricaPromozioni(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, [user]);
 
   useEffect(() => {
@@ -170,7 +181,7 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
       }
     }
 
-    // ── Salva su Supabase in background ──
+    // ── Salva su Supabase e resetta subito ──
     supabase.from('promozioni').insert([{
       user_id: user.id,
       titolo,
@@ -187,18 +198,16 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
       setPromozioni(data || []);
     }).catch(() => {}).finally(() => {
       setLoading(false);
-      setSent(true);
-      setTimeout(() => {
-        setSent(false);
-        setStep(1);
-        setTitolo('');
-        setTesto(isEn ? DEFAULT_TESTO_EN : DEFAULT_TESTO_IT);
-        setTemplateId('viola');
-        setFotoUrl(null);
-        setDestinatari('tutti');
-        setClientiSelezionati([]);
-        setCanali({ whatsapp: true, email: false });
-      }, 1800);
+      // Reset immediato — niente setTimeout (si bloccava su mobile con WhatsApp aperto)
+      setStep(1);
+      setTitolo('');
+      setTesto(isEn ? DEFAULT_TESTO_EN : DEFAULT_TESTO_IT);
+      setTemplateId('viola');
+      setFotoUrl(null);
+      setDestinatari('tutti');
+      setClientiSelezionati([]);
+      setCanali({ whatsapp: true, email: false });
+      setSent(false);
     });
   };
 
