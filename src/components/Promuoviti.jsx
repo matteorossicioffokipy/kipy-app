@@ -150,7 +150,7 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
     );
   };
 
-  const handleInvia = () => {
+  const handleInvia = async () => {
     if (loading) return;
     setLoading(true);
 
@@ -158,8 +158,38 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
       (canali.whatsapp && c.tel) || (canali.email && c.email)
     );
 
-    // ── Apri WhatsApp/Email PRIMA dell'await Supabase ──
-    // (i browser bloccano window.open fuori dal click event diretto)
+    const nDest = clientiConCanale.length;
+
+    // ── 1. Salva su Supabase PRIMA di aprire WhatsApp ──
+    // Su iOS location.href congela la pagina: l'insert non completava mai
+    try {
+      await supabase.from('promozioni').insert([{
+        user_id: user.id,
+        titolo,
+        testo,
+        template_id: templateId,
+        destinatari,
+        n_destinatari: nDest,
+        canali: JSON.stringify(canali),
+        created_at: new Date().toISOString(),
+      }]);
+    } catch (_) {}
+
+    // ── 2. Reset wizard ──
+    setLoading(false);
+    setStep(1);
+    setTitolo('');
+    setTesto(isEn ? DEFAULT_TESTO_EN : DEFAULT_TESTO_IT);
+    setTemplateId('viola');
+    setFotoUrl(null);
+    setDestinatari('tutti');
+    setClientiSelezionati([]);
+    setCanali({ whatsapp: true, email: false });
+
+    // ── 3. Ricarica storico ──
+    caricaPromozioni();
+
+    // ── 4. Apri WhatsApp/Email (dopo aver salvato) ──
     if (canali.whatsapp) {
       const primo = clientiConCanale.find(c => c.tel);
       if (primo) {
@@ -167,8 +197,8 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
           .replace(/\{nome\}/g, primo.nome || '')
           .replace(/\{attività\}/g, config?.nome_azienda || '');
         const tel = primo.tel.replace(/\D/g, '');
-        // Su iOS window.open('wa.me') apre Safari vuoto — usiamo location.href
         window.location.href = `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`;
+        return;
       }
     }
 
@@ -179,35 +209,6 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
           .replace(/\{nome\}/g, primo.nome || '')
           .replace(/\{attività\}/g, config?.nome_azienda || '');
         window.location.href = `mailto:${primo.email}?subject=${encodeURIComponent(titolo)}&body=${encodeURIComponent(msg)}`;
-      }
-    }
-
-    // ── Salva su Supabase e resetta subito ──
-    supabase.from('promozioni').insert([{
-      user_id: user.id,
-      titolo,
-      testo,
-      template_id: templateId,
-      destinatari,
-      n_destinatari: nDest,
-      canali: JSON.stringify(canali),
-      created_at: new Date().toISOString(),
-    }]).then(() => {
-      return supabase.from('promozioni').select('*').eq('user_id', user.id)
-        .order('created_at', { ascending: false }).limit(10);
-    }).then(({ data }) => {
-      setPromozioni(data || []);
-    }).catch(() => {}).finally(() => {
-      setLoading(false);
-      // Reset immediato — niente setTimeout (si bloccava su mobile con WhatsApp aperto)
-      setStep(1);
-      setTitolo('');
-      setTesto(isEn ? DEFAULT_TESTO_EN : DEFAULT_TESTO_IT);
-      setTemplateId('viola');
-      setFotoUrl(null);
-      setDestinatari('tutti');
-      setClientiSelezionati([]);
-      setCanali({ whatsapp: true, email: false });
       setSent(false);
     });
   };
