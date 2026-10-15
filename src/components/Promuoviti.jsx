@@ -605,8 +605,7 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
             >
               {L.next} <ChevronRight size={16} color="white" />
             </button>
-          ) : (
-            {sent && waUrl ? (
+          ) : sent && waUrl ? (
             <a
               href={waUrl}
               target="_blank"
