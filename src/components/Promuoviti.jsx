@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import mascotSaluto from '../assets/mascot-saluto.png';
 import {
   Megaphone, Send, Mail, MessageCircle, Users, Moon, Star,
   Image, Check, ChevronRight, Info, UserCheck, ChevronDown, X
@@ -60,6 +61,7 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [canali, setCanali] = useState({ whatsapp: true, email: false });
   const [loading, setLoading] = useState(false);
+  const [urlPronto, setUrlPronto] = useState('');
   const [promozioni, setPromozioni] = useState([]);
   const [loadingPromo, setLoadingPromo] = useState(true);
   const dropdownRef = useRef(null);
@@ -150,7 +152,6 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
   };
 
   const resetWizard = () => {
-
     setStep(1);
     setTitolo('');
     setTesto(isEn ? DEFAULT_TESTO_EN : DEFAULT_TESTO_IT);
@@ -159,6 +160,8 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
     setDestinatari('tutti');
     setClientiSelezionati([]);
     setCanali({ whatsapp: true, email: false });
+    setUrlPronto('');
+    setLoading(false);
   };
 
   const calcolaUrl = () => {
@@ -185,7 +188,7 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
     return '';
   };
 
-  // Salva con await, poi apre WhatsApp — garantisce che Supabase completi prima di lasciare la pagina
+  // Salva su Supabase con await, poi mostra il bottone <a> per aprire WhatsApp/Email
   const handleInvia = async () => {
     if (loading) return;
     setLoading(true);
@@ -200,11 +203,10 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
         destinatari, n_destinatari: nDest, canali: JSON.stringify(canali),
         created_at: new Date().toISOString(),
       }]);
-      await caricaPromozioni();
+      caricaPromozioni();
     } catch (_) {}
     setLoading(false);
-    resetWizard();
-    if (url) window.location.href = url;
+    setUrlPronto(url);
   };
 
   const L = {
@@ -265,7 +267,26 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
 
   return (
     <div style={{ fontFamily: "'Baloo 2', sans-serif" }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
+
+      {/* ── OVERLAY SALVATAGGIO ── */}
+      {loading && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 999,
+          background: 'rgba(93,92,158,0.82)', backdropFilter: 'blur(6px)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px',
+          animation: 'fadeInUp 0.3s ease both',
+        }}>
+          <img src={mascotSaluto} alt="quokka" style={{ width: '90px', height: 'auto', filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.2))' }} />
+          <div style={{ color: 'white', fontFamily: "'Baloo 2', sans-serif", fontWeight: '700', fontSize: '17px' }}>
+            {isEn ? 'Saving...' : 'Salvataggio...'}
+          </div>
+          <span style={{ width: 28, height: 28, border: '3px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+        </div>
+      )}
 
       {/* ── HEADER ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
@@ -600,6 +621,25 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
             >
               {L.next} <ChevronRight size={16} color="white" />
             </button>
+          ) : urlPronto ? (
+            <a
+              href={urlPronto}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setTimeout(resetWizard, 500)}
+              style={{
+                ...nextBtnStyle,
+                background: canali.whatsapp
+                  ? 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)'
+                  : 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+                display: 'flex', alignItems: 'center', gap: '8px',
+                textDecoration: 'none', color: 'white',
+              }}
+            >
+              {canali.whatsapp
+                ? <><MessageCircle size={16} color="white" /> Apri WhatsApp</>
+                : <><Mail size={16} color="white" /> Apri Email</>}
+            </a>
           ) : (
             <button
               onClick={handleInvia}
