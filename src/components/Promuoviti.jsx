@@ -60,7 +60,6 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [canali, setCanali] = useState({ whatsapp: true, email: false });
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
   const [promozioni, setPromozioni] = useState([]);
   const [loadingPromo, setLoadingPromo] = useState(true);
   const dropdownRef = useRef(null);
@@ -150,39 +149,50 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
     );
   };
 
-  const handleInvia = () => {
-    if (loading) return;
-    setLoading(true);
+  const resetWizard = () => {
 
+    setStep(1);
+    setTitolo('');
+    setTesto(isEn ? DEFAULT_TESTO_EN : DEFAULT_TESTO_IT);
+    setTemplateId('viola');
+    setFotoUrl(null);
+    setDestinatari('tutti');
+    setClientiSelezionati([]);
+    setCanali({ whatsapp: true, email: false });
+  };
+
+  // Calcola e salva l'URL al cambio di destinatari/canali/step
+  // così il bottone <a> è sempre pronto senza bisogno di await
+  const calcolaUrl = () => {
     const clientiConCanale = clientiFiltrati.filter(c =>
       (canali.whatsapp && c.tel) || (canali.email && c.email)
     );
-
-    // ── Apri WhatsApp/Email PRIMA dell'await Supabase ──
-    // (i browser bloccano window.open fuori dal click event diretto)
     if (canali.whatsapp) {
       const primo = clientiConCanale.find(c => c.tel);
       if (primo) {
         const msg = testo
           .replace(/\{nome\}/g, primo.nome || '')
           .replace(/\{attività\}/g, config?.nome_azienda || '');
-        const tel = primo.tel.replace(/\D/g, '');
-        // Su iOS window.open('wa.me') apre Safari vuoto — usiamo location.href
-        window.location.href = `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`;
+        return `https://wa.me/${primo.tel.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`;
       }
-    }
-
-    if (canali.email) {
+    } else if (canali.email) {
       const primo = clientiConCanale.find(c => c.email);
       if (primo) {
         const msg = testo
           .replace(/\{nome\}/g, primo.nome || '')
           .replace(/\{attività\}/g, config?.nome_azienda || '');
-        window.location.href = `mailto:${primo.email}?subject=${encodeURIComponent(titolo)}&body=${encodeURIComponent(msg)}`;
+        return `mailto:${primo.email}?subject=${encodeURIComponent(titolo)}&body=${encodeURIComponent(msg)}`;
       }
     }
+    return '';
+  };
 
-    // ── Salva su Supabase e resetta subito ──
+  // Salva su Supabase fire-and-forget (no await — iOS freeze fix)
+  const salvaPromozione = () => {
+    const clientiConCanale = clientiFiltrati.filter(c =>
+      (canali.whatsapp && c.tel) || (canali.email && c.email)
+    );
+    const nDest = clientiConCanale.length;
     supabase.from('promozioni').insert([{
       user_id: user.id,
       titolo,
@@ -192,24 +202,7 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
       n_destinatari: nDest,
       canali: JSON.stringify(canali),
       created_at: new Date().toISOString(),
-    }]).then(() => {
-      return supabase.from('promozioni').select('*').eq('user_id', user.id)
-        .order('created_at', { ascending: false }).limit(10);
-    }).then(({ data }) => {
-      setPromozioni(data || []);
-    }).catch(() => {}).finally(() => {
-      setLoading(false);
-      // Reset immediato — niente setTimeout (si bloccava su mobile con WhatsApp aperto)
-      setStep(1);
-      setTitolo('');
-      setTesto(isEn ? DEFAULT_TESTO_EN : DEFAULT_TESTO_IT);
-      setTemplateId('viola');
-      setFotoUrl(null);
-      setDestinatari('tutti');
-      setClientiSelezionati([]);
-      setCanali({ whatsapp: true, email: false });
-      setSent(false);
-    });
+    }]).then(() => caricaPromozioni()).catch(() => {});
   };
 
   const L = {
@@ -591,38 +584,49 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #F1F5F9' }}>
           <button
             onClick={() => setStep(s => s - 1)}
-            style={{ ...backBtnStyle, visibility: step > 1 && !sent ? 'visible' : 'hidden' }}
+            style={{ ...backBtnStyle, visibility: step > 1 ? 'visible' : 'hidden' }}
           >
             {L.back}
           </button>
 
           {step < 3 ? (
             <button
-              onClick={() => setStep(s => s + 1)}
+              onClick={() => { if (step === 2) salvaPromozione(); setStep(s => s + 1); }}
               disabled={!canProceed()}
               style={{ ...nextBtnStyle, opacity: canProceed() ? 1 : 0.4, display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               {L.next} <ChevronRight size={16} color="white" />
             </button>
-          ) : (
-            <button
-              onClick={handleInvia}
-              disabled={loading || sent || (!canali.whatsapp && !canali.email) || (destinatari === 'personale' && clientiSelezionati.length === 0)}
-              style={{
-                ...nextBtnStyle,
-                background: sent ? 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)' : nextBtnStyle.background,
-                opacity: (loading || (!canali.whatsapp && !canali.email) || (destinatari === 'personale' && clientiSelezionati.length === 0)) && !sent ? 0.4 : 1,
-                display: 'flex', alignItems: 'center', gap: '8px',
-                transition: 'background 0.3s',
-              }}
-            >
-              {sent ? (
-                <>{L.sentOk}</>
-              ) : (
-                <><Send size={16} color="white" /> {loading ? L.sending : L.send}</>
-              )}
-            </button>
-          )}
+          ) : (() => {
+            const url = calcolaUrl();
+            const disabled = !url || (!canali.whatsapp && !canali.email) || (destinatari === 'personale' && clientiSelezionati.length === 0);
+            const bg = canali.whatsapp
+              ? 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)'
+              : canali.email
+              ? 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)'
+              : nextBtnStyle.background;
+            return disabled ? (
+              <button disabled style={{ ...nextBtnStyle, background: bg, opacity: 0.4, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Send size={16} color="white" />
+                {canali.whatsapp ? 'Invia con WhatsApp' : canali.email ? 'Invia con Email' : L.send}
+              </button>
+            ) : (
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => { caricaPromozioni(); setTimeout(resetWizard, 500); }}
+                style={{
+                  ...nextBtnStyle,
+                  background: bg,
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  textDecoration: 'none', color: 'white',
+                }}
+              >
+                {canali.whatsapp ? <><MessageCircle size={16} color="white" /> Invia con WhatsApp</> : <><Mail size={16} color="white" /> Invia con Email</>}
+              </a>
+            );
+          })()}
         </div>
       </div>
 
