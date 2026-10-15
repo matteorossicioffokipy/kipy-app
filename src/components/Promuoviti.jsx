@@ -167,7 +167,8 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
           .replace(/\{nome\}/g, primo.nome || '')
           .replace(/\{attività\}/g, config?.nome_azienda || '');
         const tel = primo.tel.replace(/\D/g, '');
-        window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+        // Su iOS window.open('wa.me') apre Safari vuoto — usiamo location.href
+        window.location.href = `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`;
       }
     }
 
@@ -177,7 +178,7 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
         const msg = testo
           .replace(/\{nome\}/g, primo.nome || '')
           .replace(/\{attività\}/g, config?.nome_azienda || '');
-        window.open(`mailto:${primo.email}?subject=${encodeURIComponent(titolo)}&body=${encodeURIComponent(msg)}`, '_blank');
+        window.location.href = `mailto:${primo.email}?subject=${encodeURIComponent(titolo)}&body=${encodeURIComponent(msg)}`;
       }
     }
 
