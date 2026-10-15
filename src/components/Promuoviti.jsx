@@ -640,7 +640,6 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
               <Send size={16} color="white" />
               {loading ? L.sending : canali.whatsapp ? 'Invia con WhatsApp' : canali.email ? 'Invia con Email' : L.send}
             </button>
-            )}
           )}
         </div>
       </div>
