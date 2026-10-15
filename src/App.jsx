@@ -25,6 +25,7 @@ import SeasonalMascot, { SeasonBadge } from './components/SeasonalMascot';
 export default function App() {
   const { lang, switchLang, t } = useLang();
   const [user, setUser] = useState(null);
+  const [showSplash, setShowSplash] = useState(true);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [config, setConfig] = useState({});
   const [clienti, setClienti] = useState([]);
@@ -57,9 +58,11 @@ export default function App() {
   };
 
   useEffect(() => {
+    const splashTimer = setTimeout(() => setShowSplash(false), 2000);
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
     });
+    return () => clearTimeout(splashTimer);
     supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       if (_event === 'PASSWORD_RECOVERY') setIsResettingPassword(true);
@@ -155,6 +158,13 @@ export default function App() {
       alert(t('error') + ': ' + error.message);
     }
   };
+
+  if (showSplash) return (
+    <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(135deg, #5D5C9E 0%, #4a4980 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px', fontFamily: "'Baloo 2', sans-serif" }}>
+      <img src={logo} alt="Kipri" style={{ width: '110px', height: 'auto', filter: 'drop-shadow(0 4px 24px rgba(0,0,0,0.18))', animation: 'fadeUp 0.5s ease both' }} />
+      <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '16px', fontWeight: '600', margin: 0, letterSpacing: '0.5px', animation: 'fadeUp 0.5s ease 0.2s both' }}>il tuo business in tasca</p>
+    </div>
+  );
 
   if (!user) return <Login supabase={supabase} logo={logo} />;
   if (isResettingPassword) return <ResetPassword supabase={supabase} setIsResettingPassword={setIsResettingPassword} logo={logo} />;
