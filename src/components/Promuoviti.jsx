@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Megaphone, Send, Mail, MessageCircle, Users, Star,
   Check, ChevronRight, Info, UserCheck, X, Plus,
-  Pencil, Trash2, BookOpen, Clock, ChevronDown, Tag, Image, Upload,
+  Pencil, Trash2, BookOpen, Clock, ChevronDown, Tag, Image, Upload, Eye,
 } from 'lucide-react';
 import { useLang } from '../LanguageContext';
 
@@ -122,6 +122,9 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
 
   // Conferma eliminazione
   const [deleteId, setDeleteId] = useState(null);
+
+  // Anteprima promo
+  const [anteprima, setAnteprima] = useState(null);
 
   const isEn_ = isEn;
 
@@ -361,6 +364,7 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
     no:           isEn ? 'Cancel'                      : 'Annulla',
     iconeScegli:  isEn ? 'Choose an icon'              : 'Scegli un\'icona',
     iconeLabel:   isEn ? 'Icon (optional)'             : 'Icona (facoltativa)',
+    anteprima:    isEn ? 'Preview'                     : 'Anteprima',
     fotoLabel:    isEn ? 'Photo (optional)'            : 'Foto (facoltativa)',
     fotoBtn:      isEn ? 'Upload photo'                : 'Carica foto',
     fotoChange:   isEn ? 'Change'                      : 'Cambia',
@@ -445,56 +449,57 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
                   ? new Date(p.created_at).toLocaleDateString(isEn ? 'en-GB' : 'it-IT', { day: 'numeric', month: 'short' })
                   : '';
                 return (
-                  <div key={p.id} style={{ ...card, display: 'flex', alignItems: 'flex-start', gap: '12px', animation: 'fadeInUp 0.2s ease' }}>
-                    {/* Icona / foto promo */}
-                    {p.foto_url ? (
-                      <img src={p.foto_url} alt={p.titolo} style={{ width: '44px', height: '44px', borderRadius: '14px', objectFit: 'cover', flexShrink: 0 }} />
-                    ) : (
-                      <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: '#EEEDF7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>
-                        {p.icona || '🎁'}
-                      </div>
-                    )}
-
-                    {/* Info */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '14px', fontWeight: '800', color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '3px' }}>
-                        {p.titolo}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '6px' }}>
-                        {p.testo?.slice(0, 60)}{(p.testo?.length || 0) > 60 ? '…' : ''}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                        {canaliP.whatsapp && (
-                          <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 8px', borderRadius: '20px', background: '#F0FDF4', color: '#16A34A' }}>WhatsApp</span>
-                        )}
-                        {canaliP.email && (
-                          <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 8px', borderRadius: '20px', background: '#EEF2FF', color: '#5D5C9E' }}>Email</span>
-                        )}
-                        {p.codice_sconto && (
-                          <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 8px', borderRadius: '20px', background: '#FFFBEB', color: '#92400E', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                            <Tag size={9} />{p.codice_sconto}
-                          </span>
-                        )}
-                        <span style={{ fontSize: '10px', color: '#CBD5E1', marginLeft: 'auto' }}>{dataStr}</span>
+                  <div key={p.id} style={{ ...card, animation: 'fadeInUp 0.2s ease' }}>
+                    {/* Riga superiore: icona + info */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '12px' }}>
+                      {p.foto_url ? (
+                        <img src={p.foto_url} alt={p.titolo} style={{ width: '44px', height: '44px', borderRadius: '14px', objectFit: 'cover', flexShrink: 0 }} />
+                      ) : (
+                        <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: '#EEEDF7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>
+                          {p.icona || '🎁'}
+                        </div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '14px', fontWeight: '800', color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '3px' }}>
+                          {p.titolo}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '6px' }}>
+                          {p.testo?.slice(0, 60)}{(p.testo?.length || 0) > 60 ? '…' : ''}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          {canaliP.whatsapp && <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 8px', borderRadius: '20px', background: '#F0FDF4', color: '#16A34A' }}>WhatsApp</span>}
+                          {canaliP.email    && <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 8px', borderRadius: '20px', background: '#EEF2FF', color: '#5D5C9E' }}>Email</span>}
+                          {p.codice_sconto  && <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 8px', borderRadius: '20px', background: '#FFFBEB', color: '#92400E', display: 'flex', alignItems: 'center', gap: '3px' }}><Tag size={9} />{p.codice_sconto}</span>}
+                          <span style={{ fontSize: '10px', color: '#CBD5E1', marginLeft: 'auto' }}>{dataStr}</span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Azioni */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
+                    {/* Riga inferiore: 4 bottoni */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px', borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
                       {/* Invia */}
-                      <button onClick={() => apriSheet(p)} title={L.invia}
-                        style={{ width: '34px', height: '34px', borderRadius: '10px', border: 'none', background: '#5D5C9E', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                      <button onClick={() => apriSheet(p)}
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '8px 4px', borderRadius: '12px', border: 'none', background: '#5D5C9E', cursor: 'pointer' }}>
                         <Send size={14} color="white" />
+                        <span style={{ fontSize: '10px', fontWeight: '700', color: 'white', fontFamily: "'Baloo 2',sans-serif" }}>{L.invia}</span>
+                      </button>
+                      {/* Anteprima */}
+                      <button onClick={() => setAnteprima(p)}
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '8px 4px', borderRadius: '12px', border: '1.5px solid #E2E8F0', background: 'white', cursor: 'pointer' }}>
+                        <Eye size={14} color="#5D5C9E" />
+                        <span style={{ fontSize: '10px', fontWeight: '700', color: '#5D5C9E', fontFamily: "'Baloo 2',sans-serif" }}>{L.anteprima}</span>
                       </button>
                       {/* Modifica */}
-                      <button onClick={() => apriModifica(p)} title={L.modifica}
-                        style={{ width: '34px', height: '34px', borderRadius: '10px', border: '1.5px solid #E2E8F0', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                      <button onClick={() => apriModifica(p)}
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '8px 4px', borderRadius: '12px', border: '1.5px solid #E2E8F0', background: 'white', cursor: 'pointer' }}>
                         <Pencil size={14} color="#5D5C9E" />
+                        <span style={{ fontSize: '10px', fontWeight: '700', color: '#5D5C9E', fontFamily: "'Baloo 2',sans-serif" }}>{L.modifica}</span>
                       </button>
                       {/* Elimina */}
-                      <button onClick={() => setDeleteId(p.id)} title={L.elimina}
-                        style={{ width: '34px', height: '34px', borderRadius: '10px', border: '1.5px solid #FEE2E2', background: '#FFF5F5', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                      <button onClick={() => setDeleteId(p.id)}
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '8px 4px', borderRadius: '12px', border: '1.5px solid #FEE2E2', background: '#FFF5F5', cursor: 'pointer' }}>
                         <Trash2 size={14} color="#EF4444" />
+                        <span style={{ fontSize: '10px', fontWeight: '700', color: '#EF4444', fontFamily: "'Baloo 2',sans-serif" }}>{L.elimina}</span>
                       </button>
                     </div>
                   </div>
@@ -810,6 +815,46 @@ export default function Promuoviti({ supabase, user, clienti, config }) {
                 </a>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════════ MODAL ANTEPRIMA ════════════════════ */}
+      {anteprima && (
+        <div onClick={() => setAnteprima(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: 'white', borderRadius: '22px', width: '100%', maxWidth: '340px', overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+            {/* Foto header se presente */}
+            {anteprima.foto_url && (
+              <img src={anteprima.foto_url} alt={anteprima.titolo} style={{ width: '100%', height: '160px', objectFit: 'cover', display: 'block' }} />
+            )}
+            <div style={{ padding: '18px' }}>
+              {/* Icona + titolo */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                {!anteprima.foto_url && (
+                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#EEEDF7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
+                    {anteprima.icona || '🎁'}
+                  </div>
+                )}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '16px', fontWeight: '800', color: '#1E293B' }}>{anteprima.titolo}</div>
+                  {anteprima.codice_sconto && (
+                    <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '20px', background: '#FFFBEB', color: '#92400E', display: 'inline-flex', alignItems: 'center', gap: '3px', marginTop: '3px' }}>
+                      <Tag size={9} />{anteprima.codice_sconto}
+                    </span>
+                  )}
+                </div>
+                <button onClick={() => setAnteprima(null)}
+                  style={{ width: '30px', height: '30px', borderRadius: '10px', border: '1.5px solid #E2E8F0', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+                  <X size={15} color="#94A3B8" />
+                </button>
+              </div>
+              {/* Testo messaggio */}
+              <div style={{ background: '#F8FAFC', borderRadius: '14px', padding: '14px', fontSize: '13px', color: '#1E293B', lineHeight: 1.7, whiteSpace: 'pre-wrap', maxHeight: '200px', overflowY: 'auto', fontFamily: "'Baloo 2',sans-serif" }}>
+                {anteprima.testo}
+              </div>
+            </div>
           </div>
         </div>
       )}
